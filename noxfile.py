@@ -1,5 +1,6 @@
 """The project's one task runner: every CI check is a session here."""
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -66,9 +67,12 @@ def openapi_update(session: nox.Session) -> None:
 
 @nox.session
 def migrations(session: nox.Session) -> None:
-    """Apply every migration to a new database, then check for model drift."""
+    """Apply migrations, then check for drift; the test URL selects PostgreSQL."""
     with tempfile.TemporaryDirectory() as folder:
-        url = f"sqlite:///{Path(folder) / 'migrations.db'}"
+        url = os.environ.get(
+            "LIBRELIBRARY_TEST_DATABASE_URL",
+            f"sqlite:///{Path(folder) / 'migrations.db'}",
+        )
         env = {"LIBRELIBRARY_DATABASE_URL": url}
         session.run("alembic", "upgrade", "head", env=env, external=True)
         session.run("alembic", "check", env=env, external=True)

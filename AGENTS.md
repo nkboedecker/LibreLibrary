@@ -6,11 +6,17 @@ Rules for any AI coding agent working in this repository. Human contributors: se
 
 LibreLibrary is a self-hosted personal library server with a web interface, a versioned REST API, and a built-in MCP server. The design is in `docs/design/architecture.md`; read it rather than relying on a copy here.
 
-**Status:** early development. Only the project scaffolding, a health endpoint, and an empty database setup exist.
+**Status:** early development. The core exists: the data model, migrations, the REST API, local sign-in, tokens, and the policy layer. There is no web interface yet.
 
 ## Repository layout
 
 - `src/librelibrary/`: the application.
+    - `api/v1/`: thin REST routes.
+    - `services/`: business logic. Each public function declares a policy action with `@policy_action`.
+    - `authz/`: the policy layer and query scoping.
+    - `auth/`: passwords, tokens, and sign-in rate limits.
+    - `models/`: SQLAlchemy models.
+    - `schemas.py`: request and response shapes.
 - `tests/`: tests. Fixtures must be synthetic or anonymized.
 - `tools/`: check scripts that nox runs.
 - `noxfile.py`: every check, as a session.
@@ -30,7 +36,7 @@ uv sync                                     # set up the project
 uv run nox                                  # every check that needs neither Docker nor a PR
 uv run nox -s lint format                   # lint and format check
 uv run nox -s typecheck                     # type check
-uv run nox -s tests                         # tests with coverage
+uv run nox -s tests                         # tests with coverage; set LIBRELIBRARY_TEST_DATABASE_URL for PostgreSQL
 uv run nox -s docs                          # mkdocs build --strict
 uv run nox -s openapi                       # check the committed spec
 uv run nox -s openapi_update                # regenerate the spec
@@ -56,7 +62,7 @@ uv run nox -s smoke                         # healthcheck and non-root check (ne
 A change is done when:
 
 - All checks pass through the task runner.
-- Tests are added. Every endpoint has an authorization-denied test. The only public endpoint is `/api/v1/health`.
+- Tests are added. Every endpoint has an authorization-denied test: add it to `DENIED_REQUESTS` in `tests/test_contract.py`, which fails without it. The only public endpoint is `/api/v1/health`; sign-in is reached without a token but denies bad credentials.
 - The OpenAPI spec is regenerated.
 - Docs are updated, and `CHANGELOG.md` has a line under `Unreleased` for any user-visible change.
 

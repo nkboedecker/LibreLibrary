@@ -53,6 +53,10 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.13", "3.14"]
     services:
       postgres:
         image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
@@ -72,8 +76,10 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: false
-      - run: uv sync --frozen
-      - run: uv run nox -s tests
+      - run: uv sync --frozen --python "$PYTHON_VERSION"
+        env:
+          PYTHON_VERSION: ${{ matrix.python }}
+      - run: uv run nox -s migrations tests
         env:
           LIBRELIBRARY_TEST_DATABASE_URL: postgresql+pg8000://postgres:ci-only@127.0.0.1:5432/postgres
 

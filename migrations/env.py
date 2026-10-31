@@ -1,22 +1,50 @@
 """Run Alembic migrations against the configured database."""
 
-import os
+from typing import Any, Literal
 
 from alembic import context
-from sqlalchemy import create_engine
+from alembic.autogenerate.api import AutogenContext
+from sqlalchemy.engine import Connection
 
-from librelibrary.db import Base
+import librelibrary.models  # noqa: F401
+from librelibrary.db import Base, UTCDateTime, make_engine
+from librelibrary.settings import Settings
 
-DEFAULT_URL = "sqlite:///librelibrary.db"
+
+def render_item(
+    type_: str, obj: Any, _autogen_context: AutogenContext
+) -> str | Literal[False]:
+    """Write app column types as plain SQLAlchemy ones.
+
+    An applied migration must keep working when application code changes, so it
+    imports nothing from the application.
+    """
+    if type_ == "type" and isinstance(obj, UTCDateTime):
+        return "sa.DateTime(timezone=True)"
+    return False
 
 
-def run_migrations() -> None:
+def run(connection: Connection) -> None:
     """Apply migrations using one database connection."""
-    url = os.environ.get("LIBRELIBRARY_DATABASE_URL", DEFAULT_URL)
-    with create_engine(url).connect() as connection:
-        context.configure(connection=connection, target_metadata=Base.metadata)
-        with context.begin_transaction():
-            context.run_migrations()
+    context.configure(
+        connection=connection,
+        target_metadata=Base.metadata,
+        render_as_batch=True,
+        render_item=render_item,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
 
 
-run_migrations()
+def main() -> None:
+    """Use the caller's connection, or connect to the configured database."""
+    connection: Connection | None = context.config.attributes.get("connection")
+    if connection is not None:
+        run(connection)
+        return
+    with make_engine(Settings().database_url).connect() as own_connection:
+        run(own_connection)
+        own_connection.commit()
+
+
+main()

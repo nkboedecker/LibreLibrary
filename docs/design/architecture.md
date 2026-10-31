@@ -55,13 +55,13 @@ Htmx 2.0.11 is [npm's `latest`, while 4.0.0 is tagged `next`](https://registry.n
 
 - **SQLite is the default,** in WAL mode, stored in the data volume. It needs no separate service.
 - **PostgreSQL is supported,** and CI tests both. Code avoids dialect-specific features unless a test covers each dialect.
-- **Driver:** [psycopg is LGPL-3.0-only](https://pypi.org/pypi/psycopg/json), so it is excluded. The project uses pg8000 (BSD-3-Clause), which fits sync SQLAlchemy. [pg8000 declares Python 3.13 and not 3.14](https://pypi.org/pypi/pg8000/json), so CI must prove 3.14. **Fallback:** asyncpg, Apache-2.0, if the Phase 2 run fails. That fallback would mean an async design, so it would come back to the maintainer first.
-- **Search:** SQLite FTS5 and PostgreSQL full-text search, behind one search service.
+- **Driver:** [psycopg is LGPL-3.0-only](https://pypi.org/pypi/psycopg/json), so it is excluded. The project uses pg8000 (BSD-3-Clause), which fits sync SQLAlchemy. [pg8000 declares Python 3.13 and not 3.14](https://pypi.org/pypi/pg8000/json), so CI must prove 3.14. **Result:** the Phase 2 suite passes with pg8000 on 3.14. pg8000 reports every server error as `ProgrammingError`, so constraint violations are recognized by SQLSTATE class 23 in `db.is_constraint_violation`, never by catching `IntegrityError` alone. **Fallback:** asyncpg, Apache-2.0, if a later run fails. That fallback would mean an async design, so it would come back to the maintainer first.
+- **Search:** SQLite FTS5 and PostgreSQL full-text search, behind one search service, in Phase 3. Until then, the API matches part of a title or name.
 - **Migrations:** Alembic, forward-only, applied automatically at startup. Startup logs a reminder to back up, and a failed migration stops the server.
 
 ## Data model
 
-Names are logical. Phase 2 turns them into tables.
+Names are logical. **Decided:** each table arrives with the phase that uses it, so no schema is guessed ahead of its feature. Phase 2 builds the bibliographic and personal records, except `ExternalLink` and the Kosync tables, plus `User`, `ApiToken`, `AuditEvent`, `Setting`, and a `RateLimitCounter` for shared limits. `Session` waits for Phase 3, `Job` for Phase 5, `ExternalIdentity` for Phase 6, `PluginState` for Phase 7, `OAuthClient` and `OAuthGrant` for Phase 8, and `ExternalLink`, the Kosync tables, and `KosyncCredential` for Phase 9.
 
 ### Bibliographic records (shared within an instance)
 
@@ -94,7 +94,15 @@ ISBNs are stored normalized as ISBN-13 where possible. An ISBN-10 is derivable, 
 | `ExternalLink` | Link to a server's ebook or audiobook | `edition_id`, plugin, external ID, URL |
 | `KosyncDocument`, `KosyncProgress` | KOReader sync | hash, `edition_id` (nullable); user, progress, device, timestamp |
 
-**Privacy:** each copy, review, and note is `private`, `household`, or `instance`. There is no anonymous public access in the required scope.
+**Privacy:** each copy, rating, review, and note is `private`, `household`, or `instance`. There is no anonymous public access in the required scope.
+
+**Proposed, awaiting the maintainer's decision:** Phase 2 built these rules, and they can still change.
+
+- **Copies:** `private` is for the library's owner, and for its editors unless the owner turns off the library's `editors_see_private` setting. It is on by default. `household` for its members, and `instance` for everyone signed in.
+- **Ratings, reviews, and notes:** `private` is for the author, `household` for anyone who shares a library with the author, and `instance` for everyone signed in.
+- **Admins:** the admin role gives no access to other people's personal records.
+- **Shared catalog:** any user who isn't a guest can create and edit works, editions, people, and series. Deleting them needs the admin scope.
+- **Sizes:** prices are stored as an integer of minor units with a currency code, and ratings are half stars from 1 to 10.
 
 ### System records
 
@@ -142,8 +150,8 @@ Roles are `admin`, `member`, and `guest` (read-only). Library roles (owner, edit
 
 ### Web protections
 
-- **Cookie sessions:** server-side, `Secure`, `HttpOnly`, `SameSite=Lax`, with a synchronizer CSRF token on every state-changing request. Bearer-token requests don't use cookies and skip CSRF.
-- **Rate limiting:** the [`limits`](https://pypi.org/pypi/limits/json) library (MIT) in middleware, per user or token and per IP for sign-in. slowapi is not used because [it does not declare 3.14 support](https://pypi.org/pypi/slowapi/json). The in-memory store is per-process, so a multi-worker deployment needs a shared store, decided in Phase 2.
+- **Cookie sessions:** arrive in Phase 3 with the pages that use them. Server-side, `Secure`, `HttpOnly`, `SameSite=Lax`, with a synchronizer CSRF token on every state-changing request. Bearer-token requests don't use cookies and skip CSRF.
+- **Rate limiting:** the [`limits`](https://pypi.org/pypi/limits/json) library (MIT) in middleware, per IP and per username for sign-in. slowapi is not used because [it does not declare 3.14 support](https://pypi.org/pypi/slowapi/json). **Decided:** counters live in the application's database, so limits hold across workers with no new service. Each counted attempt writes a row, so per-token limits on ordinary API requests are not built yet, and need their own decision before they are.
 - **Reverse proxy:** forwarded headers are honored only from `TRUSTED_PROXIES`. `BASE_URL` sets generated links, including a path prefix.
 - **Importers:** size limits, no XML entity expansion, and outbound fetches restricted to approved providers, blocking private addresses unless an admin allows them.
 
@@ -528,8 +536,8 @@ Every phase also meets the same end-of-phase checklist: checks pass, endpoints d
 | Phase | Deliverable | Acceptance criteria |
 |---|---|---|
 | 1. Scaffolding | Task runner, contributor docs, templates, hygiene files, `pre-commit`, `CHANGELOG.md`, update bot, `ci.yml`, security workflows | Each CI check runs through one nox session. Action SHAs are resolved and pinned. The license check enforces the approved allowlist. After the maintainer's first push, the maintainer confirms how Dependabot handles digests and SHA-pinned actions. |
-| 2. Core | Data model, migrations, API, local auth, tokens, policy layer | Both databases pass on 3.13 and 3.14, including pg8000. Spec drift check passes. Every endpoint has a denied test. |
-| 3. Web UI | Catalog, search, filter, sort, tags, shelves, status, ratings, reviews, notes, loans, bulk edit, themes | Parity tests pass. Axe finds no violations on main pages. Manual keyboard pass is done. |
+| 2. Core | Data model, migrations, API, local sign-in with bearer tokens, tokens, policy layer | Both databases pass on 3.13 and 3.14, including pg8000. Spec drift check passes. Every endpoint has a denied test. |
+| 3. Web UI | Cookie sessions and CSRF protection, full-text search, catalog, search, filter, sort, tags, shelves, status, ratings, reviews, notes, loans, bulk edit, themes | Parity tests pass. Axe finds no violations on main pages. Manual keyboard pass is done. |
 | 4. Metadata and ISBN | Providers, covers, camera, scanner, batch entry | Typed and scanned ISBNs each add a book with a cover, using recorded responses. Rate limits are tested. A real camera scan is confirmed on a phone. |
 | 5. LibraryThing | Import and export | Round-trip tests pass. Mapping is verified against the real export. Non-portable fields are documented. |
 | 6. Multi-user and OIDC | Roles, privacy, household, OIDC client | Group-to-role mapping passes against the mock provider. The privacy matrix passes. Setup guides exist for Pocket ID, Authentik, Keycloak, and Authelia. |

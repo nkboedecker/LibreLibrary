@@ -26,6 +26,7 @@ extra:
     provider: mike
 nav:
   - Home: index.md
+  - Getting started: getting-started.md
   - Architecture: design/architecture.md
   - Maintainers:
       - Release checklist: maintainers/release-checklist.md
