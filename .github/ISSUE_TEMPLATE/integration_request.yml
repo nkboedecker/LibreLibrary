@@ -1,0 +1,31 @@
+name: Integration or plugin request
+description: Suggest a metadata provider, importer, ebook server, or notification target.
+labels: [integration, needs triage]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Metadata provider
+        - Importer or exporter
+        - Ebook server
+        - Notification target
+    validations:
+      required: true
+  - type: input
+    id: service
+    attributes:
+      label: Service or format
+    validations:
+      required: true
+  - type: input
+    id: api_docs
+    attributes:
+      label: Link to its API or format documentation
+  - type: textarea
+    id: use
+    attributes:
+      label: How you would use it
+    validations:
+      required: true

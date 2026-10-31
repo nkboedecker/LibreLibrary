@@ -1,0 +1,33 @@
+site_name: LibreLibrary
+site_description: A free, open-source, self-hosted personal library server.
+strict: true
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark theme
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light theme
+markdown_extensions:
+  - admonition
+  - attr_list
+  - sane_lists
+  - tables
+  - toc:
+      permalink: true
+extra:
+  version:
+    provider: mike
+nav:
+  - Home: index.md
+  - Architecture: design/architecture.md
+  - Maintainers:
+      - Release checklist: maintainers/release-checklist.md
+      - GitHub settings: maintainers/github-settings.md
+      - Labels: maintainers/labels.md

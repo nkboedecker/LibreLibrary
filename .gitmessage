@@ -1,0 +1,9 @@
+# type(optional-scope): short summary in the imperative
+# Types: build chore ci docs feat fix perf refactor revert style test
+# Add ! after the type or scope for a breaking change.
+
+# Why this change is needed:
+
+# Trailers:
+# Assisted-by: Tool name
+# Signed-off-by is added by git commit -s. Only a human may add it.

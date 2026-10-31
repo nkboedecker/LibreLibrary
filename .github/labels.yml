@@ -1,0 +1,27 @@
+- name: bug
+  color: d73a4a
+  description: Something isn't working
+- name: feature
+  color: a2eeef
+  description: A new capability
+- name: integration
+  color: 5319e7
+  description: An integration or plugin request
+- name: docs
+  color: 0075ca
+  description: Documentation
+- name: security
+  color: b60205
+  description: Security hardening; report vulnerabilities privately
+- name: breaking
+  color: e11d21
+  description: Changes a public contract
+- name: dependencies
+  color: 0366d6
+  description: Dependency updates
+- name: good first issue
+  color: 7057ff
+  description: Suitable for new contributors
+- name: needs triage
+  color: fbca04
+  description: Not reviewed yet

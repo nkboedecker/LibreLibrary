@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest a new capability.
+labels: [feature, needs triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: The solution you'd like
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

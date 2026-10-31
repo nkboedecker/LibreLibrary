@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Frontend tooling
+node_modules/
+playwright-report/
+test-results/
+
+# Docs
+/site/
+
+# Local state and secrets
+.env
+.env.*
+!.env.example
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Real personal exports never belong in the repository
+private-fixtures/
+
+# Agent and editor local files
+CLAUDE.local.md
+.claude/settings.local.json
+.idea/
+.vscode/
+.DS_Store
+
+# Project-local tool bootstrap and caches
+/.tools/
+/.cache/

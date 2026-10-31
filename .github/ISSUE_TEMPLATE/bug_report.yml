@@ -1,0 +1,29 @@
+name: Bug report
+description: Report something that isn't working.
+labels: [bug, needs triage]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The LibreLibrary version or image tag.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected and what happened
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Remove tokens, passwords, and personal data first.
+      render: text
