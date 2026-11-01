@@ -15,4 +15,4 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - Four privacy levels (personal, library, group, and server), groups of users and libraries, and admin transfer of library ownership.
 - Database migrations that run at startup, on SQLite and PostgreSQL.
 - The `librelibrary` command, with `create-admin` and `migrate`.
-- A web interface foundation: browser sign-in and sign-out with server-side cookie sessions, CSRF protection, and a searchable, paged list of works.
+- A web interface foundation: browser sign-in and sign-out with server-side cookie sessions, CSRF protection, a searchable, paged list of works, and work pages to view, add, edit, and delete.

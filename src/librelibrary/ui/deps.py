@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import Depends, Form, Request
 
 from librelibrary.api.deps import DbSession
-from librelibrary.authz.policy import Actor, Denied
+from librelibrary.authz.policy import Actor, Denied, Role
 from librelibrary.errors import Unauthenticated
 from librelibrary.models import WebSession
 from librelibrary.services import websessions
@@ -25,6 +25,16 @@ class SignedIn:
         """Hold the actor and the session that identified them."""
         self.actor = actor
         self.web_session = web_session
+
+    @property
+    def can_edit(self) -> bool:
+        """Say whether to offer editing; the policy layer still decides."""
+        return self.actor.role != Role.GUEST
+
+    @property
+    def is_admin(self) -> bool:
+        """Say whether to offer admin actions; the policy layer still decides."""
+        return self.actor.role == Role.ADMIN
 
     @property
     def csrf_token(self) -> str:

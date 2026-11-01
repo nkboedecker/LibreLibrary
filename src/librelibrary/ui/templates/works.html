@@ -3,6 +3,7 @@
 {% block title %}Works{% endblock %}
 {% block content %}
 <h1>Works</h1>
+{% if user.can_edit %}<p><a class="button" href="/works/new">Add a work</a></p>{% endif %}
 <form method="get" action="/works" role="search" class="search">
   <label for="q">Search by title</label>
   <input id="q" name="q" type="search" value="{{ q }}" maxlength="200">
@@ -20,7 +21,7 @@
   <tbody>
     {% for work in listing.items %}
     <tr>
-      <th scope="row">{{ work.title }}</th>
+      <th scope="row"><a href="/works/{{ work.id }}">{{ work.title }}</a></th>
       <td>{{ work.first_published or "" }}</td>
       <td>{{ work.original_language or "" }}</td>
     </tr>

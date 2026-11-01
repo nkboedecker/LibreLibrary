@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ work.title }}{% endblock %}
+{% block content %}
+<p><a href="/works">← All works</a></p>
+<h1>{{ work.title }}</h1>
+{% if work.contributions %}
+<p class="byline">
+  {% for contribution in work.contributions %}
+  {{ names[contribution.person_id] }} ({{ contribution.role }}){% if not loop.last %}, {% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+<dl>
+  {% if work.first_published %}<dt>First published</dt><dd>{{ work.first_published }}</dd>{% endif %}
+  {% if work.original_language %}<dt>Original language</dt><dd>{{ work.original_language }}</dd>{% endif %}
+  {% if work.series_entries %}<dt>Series positions</dt>
+  <dd>{% for entry in work.series_entries %}{{ entry.position }}{% if not loop.last %}, {% endif %}{% endfor %}</dd>{% endif %}
+  {% if work.subjects %}<dt>Subjects</dt>
+  <dd>{% for subject in work.subjects %}{{ subject.label }}{% if not loop.last %}; {% endif %}{% endfor %}</dd>{% endif %}
+</dl>
+{% if work.description %}<p class="description">{{ work.description }}</p>{% endif %}
+{% if user.can_edit %}<p><a class="button" href="/works/{{ work.id }}/edit">Edit this work</a></p>{% endif %}
+<h2>Editions</h2>
+{% if editions.items %}
+<table>
+  <thead><tr><th scope="col">Title</th><th scope="col">Publisher</th>
+    <th scope="col">Published</th><th scope="col">Format</th></tr></thead>
+  <tbody>
+  {% for edition in editions.items %}
+  <tr><th scope="row">{{ edition.title or work.title }}</th>
+    <td>{{ edition.publisher or "" }}</td><td>{{ edition.published or "" }}</td>
+    <td>{{ edition.format or "" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No editions yet.</p>
+{% endif %}
+{% endblock %}

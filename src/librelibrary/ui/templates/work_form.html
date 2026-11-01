@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set heading = "Edit work" if work else "Add a work" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+{% if errors %}
+<div class="error" role="alert">
+  <p>The work wasn't saved.</p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<form method="post" action="{{ '/works/%d/edit' % work.id if work else '/works/new' }}" class="stack wide">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  <label for="title">Title</label>
+  <input id="title" name="title" type="text" maxlength="1000" required
+         value="{{ values.get('title') or '' }}">
+  <label for="original_language">Original language</label>
+  <input id="original_language" name="original_language" type="text"
+         maxlength="35" aria-describedby="lang-hint"
+         value="{{ values.get('original_language') or '' }}">
+  <p id="lang-hint" class="hint">A language code, such as en or fr.</p>
+  <label for="first_published">First published</label>
+  <input id="first_published" name="first_published" type="text" maxlength="32"
+         aria-describedby="date-hint"
+         value="{{ values.get('first_published') or '' }}">
+  <p id="date-hint" class="hint">A year or a full date, such as 1969 or 1969-03-14.</p>
+  <label for="description">Description</label>
+  <textarea id="description" name="description" rows="8">{{ values.get('description') or '' }}</textarea>
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="{{ '/works/%d' % work.id if work else '/works' }}">Cancel</a>
+  </div>
+</form>
+{% if work and user.is_admin %}
+<section aria-labelledby="delete-heading" class="danger">
+  <h2 id="delete-heading">Delete this work</h2>
+  <p>This also removes its editions. It is refused while someone owns a copy.</p>
+  <form method="post" action="/works/{{ work.id }}/delete" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+    <label class="check"><input type="checkbox" name="confirm" value="yes" required>
+      Yes, delete “{{ work.title }}”</label>
+    <button type="submit" class="danger-button">Delete work</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

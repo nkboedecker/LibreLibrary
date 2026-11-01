@@ -3,15 +3,14 @@
 import secrets
 from typing import Annotated, cast
 
-from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse, Response
 from limits.strategies import RateLimiter
 
 from librelibrary.api.deps import DbSession, client_ip, get_settings
 from librelibrary.authz.policy import Denied
 from librelibrary.errors import RateLimited, Unauthenticated
-from librelibrary.schemas import Page, WorkOut
-from librelibrary.services import accounts, catalog, websessions
+from librelibrary.services import accounts, websessions
 from librelibrary.settings import Settings
 from librelibrary.ui import ui_route
 from librelibrary.ui.deps import (
@@ -23,7 +22,6 @@ from librelibrary.ui.deps import (
 from librelibrary.ui.templating import templates
 
 router = APIRouter()
-PAGE_SIZE = 25
 _SEE_OTHER = 303
 _COOKIE_FLAGS = {"httponly": True, "secure": True, "samesite": "lax", "path": "/"}
 _LOGIN_FAILED = {
@@ -110,29 +108,3 @@ def logout(
     response = RedirectResponse("/login", status_code=_SEE_OTHER)
     response.delete_cookie(SESSION_COOKIE, path="/")
     return response
-
-
-@ui_route(router, "GET", "/works", api="works_list")
-def works(
-    request: Request,
-    session: DbSession,
-    user: CurrentUser,
-    q: Annotated[str | None, Query(max_length=200, pattern=r"^[^\x00]*$")] = None,
-    page: Annotated[int, Query(ge=1, le=1_000_000)] = 1,
-) -> Response:
-    """List works, with a search box and paging."""
-    listing = Page[WorkOut].model_validate(
-        catalog.list_works(session, user.actor, q, PAGE_SIZE, (page - 1) * PAGE_SIZE)
-    )
-    last_page = max(1, -(-listing.total // PAGE_SIZE))
-    return templates.TemplateResponse(
-        request,
-        "works.html",
-        {
-            "user": user,
-            "listing": listing,
-            "q": q or "",
-            "page": page,
-            "last_page": last_page,
-        },
-    )
