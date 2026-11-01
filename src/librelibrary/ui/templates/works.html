@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% set nav = "works" %}
+{% block title %}Works{% endblock %}
+{% block content %}
+<h1>Works</h1>
+<form method="get" action="/works" role="search" class="search">
+  <label for="q">Search by title</label>
+  <input id="q" name="q" type="search" value="{{ q }}" maxlength="200">
+  <button type="submit">Search</button>
+</form>
+{% if listing.items %}
+<table>
+  <caption class="visually-hidden">
+    Works, page {{ page }} of {{ last_page }}
+  </caption>
+  <thead>
+    <tr><th scope="col">Title</th><th scope="col">First published</th>
+        <th scope="col">Language</th></tr>
+  </thead>
+  <tbody>
+    {% for work in listing.items %}
+    <tr>
+      <th scope="row">{{ work.title }}</th>
+      <td>{{ work.first_published or "" }}</td>
+      <td>{{ work.original_language or "" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>{% if q %}No works match “{{ q }}”.{% else %}There are no works yet.{% endif %}</p>
+{% endif %}
+{% if last_page > 1 %}
+<nav aria-label="Pages" class="pager">
+  {% if page > 1 %}
+  <a href="/works?page={{ page - 1 }}{% if q %}&amp;q={{ q | urlencode }}{% endif %}" rel="prev">Previous</a>
+  {% endif %}
+  <span>Page {{ page }} of {{ last_page }}</span>
+  {% if page < last_page %}
+  <a href="/works?page={{ page + 1 }}{% if q %}&amp;q={{ q | urlencode }}{% endif %}" rel="next">Next</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

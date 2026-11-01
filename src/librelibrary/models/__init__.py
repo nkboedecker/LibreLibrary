@@ -37,6 +37,7 @@ from librelibrary.models.system import (
     RateLimitCounter,
     Setting,
     User,
+    WebSession,
 )
 
 __all__ = [
@@ -70,6 +71,7 @@ __all__ = [
     "Subject",
     "Tag",
     "User",
+    "WebSession",
     "Work",
     "WorkSubject",
 ]

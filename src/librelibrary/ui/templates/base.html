@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}{% endblock %} · LibreLibrary</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <a class="brand" href="/">LibreLibrary</a>
+    {% if user %}
+    <nav aria-label="Main">
+      <a href="/works"{% if nav == "works" %} aria-current="page"{% endif %}>Works</a>
+    </nav>
+    <form method="post" action="/logout" class="sign-out">
+      <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+      <button type="submit" class="link-button">Sign out</button>
+    </form>
+    {% endif %}
+  </header>
+  <main id="main">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

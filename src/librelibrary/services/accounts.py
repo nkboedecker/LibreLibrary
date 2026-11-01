@@ -116,7 +116,7 @@ def _hit_login_limits(
         raise RateLimited
 
 
-def login(  # noqa: PLR0913
+def sign_in(  # noqa: PLR0913
     session: Session,
     *,
     limiter: RateLimiter,
@@ -124,10 +124,8 @@ def login(  # noqa: PLR0913
     ip: str,
     username: str,
     password: str,
-    token_name: str,
-    scopes: list[str],
-) -> IssuedToken:
-    """Check a password and issue a token. The caller has no identity yet."""
+) -> User:
+    """Check a password and return the user. The caller has no identity yet."""
     if not settings.local_auth_enabled:
         raise Denied
     _hit_login_limits(limiter, settings, ip, username)
@@ -142,10 +140,22 @@ def login(  # noqa: PLR0913
         audit.record(session, user.id, "login_failed", f"user:{user.id}")
         session.commit()
         raise Unauthenticated
-    if Scope.ADMIN.value in scopes and user.role != Role.ADMIN.value:
-        raise Denied
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(password)
+    return user
+
+
+def issue_login_token(
+    session: Session,
+    *,
+    settings: Settings,
+    user: User,
+    token_name: str,
+    scopes: list[str],
+) -> IssuedToken:
+    """Issue the bearer token that a successful sign-in earns."""
+    if Scope.ADMIN.value in scopes and user.role != Role.ADMIN.value:
+        raise Denied
     expires = utcnow() + timedelta(days=settings.login_token_lifetime_days)
     issued = _issue_token(session, user.id, token_name, scopes, expires)
     audit.record(session, user.id, "login", f"user:{user.id}")

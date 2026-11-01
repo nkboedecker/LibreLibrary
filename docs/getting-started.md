@@ -1,6 +1,6 @@
 # Getting started
 
-LibreLibrary has no release yet. These steps work from a checkout of the repository, and they cover the REST API only, because the web interface doesn't exist yet.
+LibreLibrary has no release yet. These steps work from a checkout of the repository, and they cover the REST API and the first pages of the web interface.
 
 ## Run the server
 
@@ -23,7 +23,11 @@ docker exec --interactive --tty librelibrary \
     librelibrary create-admin --username admin
 ```
 
-## Sign in
+## Sign in on the web
+
+Open `http://localhost:8000/` and sign in with the admin's username and password. The pages so far are the sign-in form and a searchable, paged list of works. The session cookie is marked `Secure`, so browsers send it only over HTTPS. Chrome and Firefox also accept it on `localhost`, but a server on another host needs HTTPS in front of it.
+
+## Sign in to the API
 
 Sign in to get a bearer token, and send that token with each request:
 
