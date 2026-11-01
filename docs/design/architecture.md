@@ -115,7 +115,7 @@ ISBNs are stored normalized as ISBN-13 where possible. An ISBN-10 is derivable, 
 
 **Prices (decided):** a copy's price has two decimal places and a currency code. The API sends it as a string, such as `"12.99"`, and it is stored as a whole number of hundredths, so it stays exact on both databases.
 
-**Proposed, awaiting the maintainer's decision:** ratings are half stars from 1 to 10.
+**Ratings (decided):** half stars, stored as a whole number from 1 to 10, so 7 means 3½ stars.
 
 ### System records
 
