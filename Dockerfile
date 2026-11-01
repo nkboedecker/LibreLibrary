@@ -1,12 +1,12 @@
 # The Docker phase of the project plan adds configurable UID and GID.
-FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8 AS build
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 RUN pip install --no-cache-dir uv==0.13.6
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable
 
-FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
 LABEL org.opencontainers.image.title="LibreLibrary" \
       org.opencontainers.image.licenses="Apache-2.0"
 RUN useradd --uid 1000 --no-create-home librelibrary \
