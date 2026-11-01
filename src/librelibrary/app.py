@@ -22,6 +22,7 @@ from librelibrary.db import is_constraint_violation, make_engine
 from librelibrary.errors import Conflict, NotFound, RateLimited, Unauthenticated
 from librelibrary.logs import configure_logging
 from librelibrary.migrate import run_migrations
+from librelibrary.proxy import ForwardedProtoMiddleware
 from librelibrary.schemas import ErrorOut
 from librelibrary.settings import Settings
 from librelibrary.ui import pages, works
@@ -142,6 +143,9 @@ def create_app(
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
+    )
+    app.add_middleware(
+        ForwardedProtoMiddleware, trusted_proxies=settings.trusted_proxies
     )
     app.state.settings = settings
     app.state.engine = engine

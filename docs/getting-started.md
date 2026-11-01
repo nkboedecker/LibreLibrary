@@ -55,9 +55,26 @@ Set these environment variables to configure the server:
 | `LIBRELIBRARY_LOGIN_RATE_LIMIT_PER_IP` | `20/minute` | Sign-in attempts allowed from one address. |
 | `LIBRELIBRARY_LOGIN_RATE_LIMIT_PER_USERNAME` | `10/minute` | Sign-in and password-change attempts allowed for one username. |
 | `LIBRELIBRARY_LOGIN_TOKEN_LIFETIME_DAYS` | `30` | How long a sign-in token lasts. |
-| `LIBRELIBRARY_TRUSTED_PROXIES` | `[]` | A JSON list of proxy addresses or networks, such as `["192.0.2.0/24"]`. `X-Forwarded-For` is read only from these. |
+| `LIBRELIBRARY_TRUSTED_PROXIES` | `[]` | A JSON list of proxy addresses or networks, such as `["192.0.2.0/24"]`. `X-Forwarded-For` and `X-Forwarded-Proto` are read only from these. |
 
-If you run the server behind a reverse proxy, set `LIBRELIBRARY_TRUSTED_PROXIES`. Otherwise, all clients share one sign-in limit, because they all appear to come from the proxy.
+If you run the server behind a reverse proxy, set `LIBRELIBRARY_TRUSTED_PROXIES`. Otherwise, all clients share one sign-in limit, because they all appear to come from the proxy, and redirects point at `http://` instead of `https://`.
+
+### Proxy chains
+
+List every proxy that sits between the client and the server, not only the one that connects to it. For example, if a content delivery network (CDN) forwards requests to your hosting platform's proxy, which forwards them to the server, trust both:
+
+```sh
+LIBRELIBRARY_TRUSTED_PROXIES='["192.0.2.0/24", "198.51.100.0/24"]'
+```
+
+The server reads `X-Forwarded-For` from right to left and takes the first address that isn't a trusted proxy as the client. If a proxy in the chain is missing from the list, the server takes that proxy's address as the client's. This can have two effects:
+
+- If the proxy's address changes between requests, each request gets its own sign-in limit, so the limit never applies.
+- If the proxy's address is fixed, all clients behind it share one limit.
+
+To check your setup, send more sign-in attempts than `LIBRELIBRARY_LOGIN_RATE_LIMIT_PER_IP` allows, using a different username each time. You should get `429` responses after the limit. The check is also a good test after any change to the list.
+
+Providers can change their address ranges. Check the list when you change providers, and now and then after that.
 
 ## API reference
 
