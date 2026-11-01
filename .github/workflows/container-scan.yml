@@ -28,9 +28,17 @@ jobs:
           enable-cache: false
       - run: uv sync --frozen
       - run: uv run nox -s image
+      # List everything, including Debian findings with no fix yet.
+      - uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: librelibrary:dev
+          fail-build: false
+          output-format: table
+      # Fail only on what an update can fix.
       - uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
           image: librelibrary:dev
           fail-build: true
           severity-cutoff: high
+          only-fixed: true
           output-format: table
