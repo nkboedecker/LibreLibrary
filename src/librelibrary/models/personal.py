@@ -1,6 +1,7 @@
 """Personal records, owned by a user or a library."""
 
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
@@ -13,7 +14,42 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from librelibrary.db import Base, UTCDateTime, utcnow
+from librelibrary.db import Base, Hundredths, UTCDateTime, utcnow
+
+
+class Group(Base):
+    """Users and libraries that share with each other."""
+
+    __tablename__ = "user_group"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True)
+
+
+class GroupMember(Base):
+    """A user in a group."""
+
+    __tablename__ = "group_member"
+
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user_account.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+
+class GroupLibrary(Base):
+    """A library in a group."""
+
+    __tablename__ = "group_library"
+
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    library_id: Mapped[int] = mapped_column(
+        ForeignKey("library.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
 
 
 class Library(Base):
@@ -26,8 +62,8 @@ class Library(Base):
         ForeignKey("user_account.id", ondelete="RESTRICT"), index=True
     )
     name: Mapped[str] = mapped_column(String(200))
-    default_privacy: Mapped[str] = mapped_column(String(16), default="private")
-    editors_see_private: Mapped[bool] = mapped_column(default=True)
+    default_privacy: Mapped[str] = mapped_column(String(16), default="personal")
+    editors_see_personal: Mapped[bool] = mapped_column(default=True)
 
 
 class LibraryMember(Base):
@@ -60,7 +96,7 @@ class Copy(Base):
     location: Mapped[str | None] = mapped_column(String(200))
     acquired: Mapped[date | None]
     source: Mapped[str | None] = mapped_column(String(200))
-    price_minor: Mapped[int | None]
+    price: Mapped[Decimal | None] = mapped_column(Hundredths)
     currency: Mapped[str | None] = mapped_column(String(3))
     privacy: Mapped[str] = mapped_column(String(16))
 
@@ -100,6 +136,12 @@ class Rating(Base):
     )
     value: Mapped[int]
     privacy: Mapped[str] = mapped_column(String(16))
+    audience_library_id: Mapped[int | None] = mapped_column(
+        ForeignKey("library.id", ondelete="SET NULL"), index=True
+    )
+    audience_group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user_group.id", ondelete="SET NULL"), index=True
+    )
 
 
 class Review(Base):
@@ -116,6 +158,12 @@ class Review(Base):
     )
     text: Mapped[str] = mapped_column(Text)
     privacy: Mapped[str] = mapped_column(String(16))
+    audience_library_id: Mapped[int | None] = mapped_column(
+        ForeignKey("library.id", ondelete="SET NULL"), index=True
+    )
+    audience_group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user_group.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
@@ -133,6 +181,12 @@ class Note(Base):
     )
     text: Mapped[str] = mapped_column(Text)
     privacy: Mapped[str] = mapped_column(String(16))
+    audience_library_id: Mapped[int | None] = mapped_column(
+        ForeignKey("library.id", ondelete="SET NULL"), index=True
+    )
+    audience_group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user_group.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 

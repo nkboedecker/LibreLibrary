@@ -40,6 +40,7 @@ from librelibrary.schemas import (
     ShelfPatch,
     TagIn,
 )
+from librelibrary.services import audit
 from librelibrary.services.common import (
     Listing,
     apply_changes,
@@ -130,6 +131,38 @@ def delete_library(session: Session, actor: Actor, library_id: int) -> None:
     session.execute(delete(Loan).where(Loan.copy_id.in_(copies)))
     session.delete(library)
     session.commit()
+
+
+@policy_action(Action.LIBRARY_TRANSFER)
+def transfer_library(
+    session: Session, actor: Actor, library_id: int, owner_id: int
+) -> Library:
+    """Give a library a new owner, so that it can't be stranded by a departure.
+
+    The old owner stays on as an editor.
+    """
+    library = get_or_404(session, Library, library_id)
+    new_owner = get_or_404(session, User, owner_id)
+    if not new_owner.is_active:
+        raise Conflict
+    old_member = session.get(LibraryMember, (library_id, library.owner_id))
+    if old_member is not None and library.owner_id != owner_id:
+        old_member.role = LibraryRole.EDITOR.value
+    member = session.get(LibraryMember, (library_id, owner_id))
+    if member is None:
+        member = LibraryMember(library_id=library_id, user_id=owner_id, role="")
+        session.add(member)
+    member.role = LibraryRole.OWNER.value
+    library.owner_id = owner_id
+    audit.record(
+        session,
+        actor.user_id,
+        "library_transferred",
+        f"library:{library_id}",
+        new_owner=owner_id,
+    )
+    session.commit()
+    return library
 
 
 @policy_action(Action.LIBRARY_READ)

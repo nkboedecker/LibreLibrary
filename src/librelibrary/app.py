@@ -14,7 +14,7 @@ from sqlalchemy.exc import DBAPIError
 from starlette.concurrency import run_in_threadpool
 
 from librelibrary import __version__
-from librelibrary.api.v1 import accounts, catalog, libraries, responses, system
+from librelibrary.api.v1 import accounts, catalog, groups, libraries, responses, system
 from librelibrary.auth.ratelimit import DatabaseStorage
 from librelibrary.authz.policy import Denied
 from librelibrary.db import is_constraint_violation, make_engine
@@ -108,7 +108,7 @@ def create_app(
     api = APIRouter(prefix="/api/v1")
     api.include_router(system.public_router)
     protected = APIRouter(responses=_ERROR_RESPONSES)
-    for module in (accounts, catalog, libraries, responses, system):
+    for module in (accounts, catalog, groups, libraries, responses, system):
         protected.include_router(module.router)
     api.include_router(protected)
     app.include_router(api)

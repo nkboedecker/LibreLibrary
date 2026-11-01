@@ -66,6 +66,7 @@ def test_a_read_token_cannot_write() -> None:
         Action.AUDIT_READ,
         Action.SETTINGS_ADMIN,
         Action.CATALOG_DELETE,
+        Action.GROUP_ADMIN,
     ],
 )
 class TestAdminActions:

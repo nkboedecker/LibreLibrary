@@ -1,9 +1,10 @@
 """Database metadata, column types, and engine setup."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import DateTime, Engine, MetaData, create_engine, event
+from sqlalchemy import BigInteger, DateTime, Engine, MetaData, create_engine, event
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import DeclarativeBase
@@ -53,6 +54,27 @@ class UTCDateTime(TypeDecorator[datetime]):
         if value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
+
+
+class Hundredths(TypeDecorator[Decimal]):
+    """A decimal with two places, stored as a whole number of hundredths.
+
+    SQLite has no exact decimal type, so storing an integer keeps a price exact
+    on both databases.
+    """
+
+    impl = BigInteger
+    cache_ok = True
+
+    def process_bind_param(self, value: Decimal | None, dialect: Dialect) -> int | None:
+        """Convert a value to hundredths before storing it."""
+        return None if value is None else int(value * 100)
+
+    def process_result_value(
+        self, value: int | None, dialect: Dialect
+    ) -> Decimal | None:
+        """Convert stored hundredths back to a decimal."""
+        return None if value is None else Decimal(value) / 100
 
 
 def utcnow() -> datetime:

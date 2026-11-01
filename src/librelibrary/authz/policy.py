@@ -33,11 +33,12 @@ class LibraryRole(StrEnum):
 
 
 class Privacy(StrEnum):
-    """Who can see a copy, rating, review, or note."""
+    """How widely a copy, rating, review, or note is shared."""
 
-    PRIVATE = "private"  # noqa: S105
-    HOUSEHOLD = "household"
-    INSTANCE = "instance"
+    PERSONAL = "personal"
+    LIBRARY = "library"
+    GROUP = "group"
+    SERVER = "server"
 
 
 class _Rank(IntEnum):
@@ -72,6 +73,10 @@ class Action(StrEnum):
     LIBRARY_MANAGE = "library:manage"
     COPY_READ = "copy:read"
     LOAN_READ = "loan:read"
+    LIBRARY_TRANSFER = "library:transfer"
+    GROUP_READ = "group:read"
+    GROUP_ADMIN = "group:admin"
+    GROUP_LIBRARY_EDIT = "group:library-edit"
     PERSONAL_READ = "personal:read"
     PERSONAL_WRITE = "personal:write"
 
@@ -107,6 +112,10 @@ _RULES = {
     ),
     Action.COPY_READ: _Rule(_READ),
     Action.LOAN_READ: _Rule(_READ, library_role=LibraryRole.EDITOR),
+    Action.LIBRARY_TRANSFER: _Rule(Scope.ADMIN, needs_admin=True),
+    Action.GROUP_READ: _Rule(_READ),
+    Action.GROUP_ADMIN: _Rule(Scope.ADMIN, needs_admin=True),
+    Action.GROUP_LIBRARY_EDIT: _Rule(_WRITE, blocks_guests=True),
     Action.PERSONAL_READ: _Rule(_READ),
     Action.PERSONAL_WRITE: _Rule(_WRITE, blocks_guests=True),
 }

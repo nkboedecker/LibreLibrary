@@ -20,6 +20,7 @@ from librelibrary.schemas import (
     LibraryIn,
     LibraryOut,
     LibraryPatch,
+    LibraryTransferIn,
     LoanIn,
     LoanOut,
     LoanReturnIn,
@@ -85,6 +86,19 @@ def update_library(
 def delete_library(library_id: PathId, session: DbSession, actor: CurrentActor) -> None:
     """Delete a library you own, with everything in it."""
     libraries.delete_library(session, actor, library_id)
+
+
+@router.post("/libraries/{library_id}/transfer", operation_id="libraries_transfer")
+def transfer_library(
+    library_id: PathId,
+    payload: LibraryTransferIn,
+    session: DbSession,
+    actor: CurrentActor,
+) -> LibraryOut:
+    """Give a library a new owner. Needs the admin scope."""
+    return LibraryOut.model_validate(
+        libraries.transfer_library(session, actor, library_id, payload.owner_id)
+    )
 
 
 @router.get("/libraries/{library_id}/members", operation_id="library_members_list")

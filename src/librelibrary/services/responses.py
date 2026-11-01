@@ -1,5 +1,7 @@
 """What a user records about a work: readings, ratings, reviews, and notes."""
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -7,13 +9,14 @@ from librelibrary.authz.policy import (
     Action,
     Actor,
     OwnedResource,
+    Privacy,
     policy_action,
     require,
 )
-from librelibrary.authz.scoping import visible_responses
+from librelibrary.authz.scoping import library_role, visible_responses
 from librelibrary.db import utcnow
-from librelibrary.errors import NotFound
-from librelibrary.models import Note, Rating, ReadingState, Review, Work
+from librelibrary.errors import Conflict, NotFound
+from librelibrary.models import GroupMember, Note, Rating, ReadingState, Review, Work
 from librelibrary.schemas import (
     RatingIn,
     ReadingStateIn,
@@ -27,6 +30,56 @@ from librelibrary.services.common import (
     get_or_404,
     paginate,
 )
+
+
+def _audience(
+    session: Session,
+    actor: Actor,
+    privacy: str | None,
+    library_id: int | None,
+    group_id: int | None,
+) -> dict[str, int | None]:
+    """Check a sharing choice and return the audience columns to store.
+
+    A library or group level needs an audience that the actor belongs to. Other
+    levels have no audience, so any that was sent is dropped.
+    """
+    if privacy == Privacy.LIBRARY.value:
+        if library_id is None:
+            raise Conflict
+        if library_role(session, actor, library_id) is None:
+            raise NotFound
+        return {"audience_library_id": library_id, "audience_group_id": None}
+    if privacy == Privacy.GROUP.value:
+        if group_id is None:
+            raise Conflict
+        if session.get(GroupMember, (group_id, actor.user_id)) is None:
+            raise NotFound
+        return {"audience_library_id": None, "audience_group_id": group_id}
+    return {"audience_library_id": None, "audience_group_id": None}
+
+
+def _sharing_fields(
+    session: Session,
+    actor: Actor,
+    record: Rating | Review | Note,
+    changes: dict[str, Any],
+) -> dict[str, Any]:
+    """Add the checked audience to a change that touches sharing.
+
+    A change to anything else skips the check, so that someone who has left a
+    group can still fix a typo in what they wrote there.
+    """
+    if not {"privacy", "audience_library_id", "audience_group_id"} & set(changes):
+        return changes
+    audience = _audience(
+        session,
+        actor,
+        changes.get("privacy", record.privacy),
+        changes.get("audience_library_id", record.audience_library_id),
+        changes.get("audience_group_id", record.audience_group_id),
+    )
+    return {**changes, **audience}
 
 
 def _own_reading(session: Session, actor: Actor, state_id: int) -> ReadingState:
@@ -104,11 +157,21 @@ def set_rating(
     rating = session.scalar(
         select(Rating).where(Rating.user_id == actor.user_id, Rating.work_id == work_id)
     )
+    fields = {
+        **payload.model_dump(),
+        **_audience(
+            session,
+            actor,
+            payload.privacy,
+            payload.audience_library_id,
+            payload.audience_group_id,
+        ),
+    }
     if rating is None:
-        rating = Rating(user_id=actor.user_id, work_id=work_id, **payload.model_dump())
+        rating = Rating(user_id=actor.user_id, work_id=work_id, **fields)
         session.add(rating)
     else:
-        apply_changes(rating, payload.model_dump())
+        apply_changes(rating, fields)
     session.commit()
     return rating
 
@@ -161,7 +224,16 @@ def _create_text[T: (Review, Note)](
         user_id=actor.user_id,
         work_id=work_id,
         created_at=utcnow(),
-        **payload.model_dump(),
+        **{
+            **payload.model_dump(),
+            **_audience(
+                session,
+                actor,
+                payload.privacy,
+                payload.audience_library_id,
+                payload.audience_group_id,
+            ),
+        },
     )
     session.add(record)
     session.commit()
@@ -177,7 +249,8 @@ def _update_text[T: (Review, Note)](
 ) -> T:
     record = _visible_text(session, actor, model, record_id)
     require(actor, Action.PERSONAL_WRITE, OwnedResource(record.user_id))
-    apply_changes(record, payload.model_dump(exclude_unset=True))
+    changes = payload.model_dump(exclude_unset=True)
+    apply_changes(record, _sharing_fields(session, actor, record, changes))
     session.commit()
     return record
 

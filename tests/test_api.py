@@ -59,7 +59,7 @@ def make_library(api: Api, account: Account, **fields: Any) -> int:
 
 
 def make_copy(
-    api: Api, account: Account, library: int, privacy: str = "private"
+    api: Api, account: Account, library: int, privacy: str = "personal"
 ) -> int:
     """Create a copy in a library."""
     body = {
@@ -295,19 +295,36 @@ def test_deleting_a_borrower_with_loans_conflicts(api: Api, owner: Account) -> N
 # The privacy matrix: (privacy, relationship) -> can they see it?
 
 COPY_MATRIX = [
-    ("private", "owner", True),
-    ("private", "editor", True),
-    ("private", "viewer", False),
-    ("private", "stranger", False),
-    ("household", "owner", True),
-    ("household", "editor", True),
-    ("household", "viewer", True),
-    ("household", "stranger", False),
-    ("instance", "owner", True),
-    ("instance", "editor", True),
-    ("instance", "viewer", True),
-    ("instance", "stranger", True),
+    ("personal", "owner", True),
+    ("personal", "editor", True),
+    ("personal", "viewer", False),
+    ("personal", "group_member", False),
+    ("personal", "stranger", False),
+    ("library", "owner", True),
+    ("library", "editor", True),
+    ("library", "viewer", True),
+    ("library", "group_member", False),
+    ("library", "stranger", False),
+    ("group", "owner", True),
+    ("group", "editor", True),
+    ("group", "viewer", True),
+    ("group", "group_member", True),
+    ("group", "stranger", False),
+    ("server", "owner", True),
+    ("server", "editor", True),
+    ("server", "viewer", True),
+    ("server", "group_member", True),
+    ("server", "stranger", True),
 ]
+
+
+def make_group(api: Api, make_account: MakeAccount, *members: Account) -> int:
+    """Have an admin create a group with these members."""
+    admin = make_account("admin", scopes=("admin",))
+    group = api.call(admin, "POST", "/groups", {"name": f"Group {admin.id}"}, 201)["id"]
+    for member in members:
+        api.call(admin, "PUT", f"/groups/{group}/members/{member.id}", expect=204)
+    return int(group)
 
 
 @pytest.mark.parametrize(("privacy", "relation", "visible"), COPY_MATRIX)
@@ -323,7 +340,11 @@ def test_copy_privacy_matrix(  # noqa: PLR0913
     library = make_library(api, owner)
     copy = make_copy(api, owner, library, privacy)
     reader = owner
-    if relation != "owner":
+    if relation == "group_member":
+        reader = make_account()
+        group = make_group(api, make_account, owner, reader)
+        api.call(owner, "PUT", f"/groups/{group}/libraries/{library}", expect=204)
+    elif relation != "owner":
         reader = make_account()
         if relation != "stranger":
             join(api, owner, reader, library, relation)
@@ -336,7 +357,7 @@ def test_copy_privacy_matrix(  # noqa: PLR0913
 @pytest.mark.parametrize(
     ("setting", "editor_status"), [(True, 200), (False, 404), (None, 200)]
 )
-def test_library_setting_decides_if_editors_see_private_copies(
+def test_library_setting_decides_if_editors_see_personal_copies(
     api: Api,
     owner: Account,
     make_account: MakeAccount,
@@ -344,7 +365,7 @@ def test_library_setting_decides_if_editors_see_private_copies(
     editor_status: int,
 ) -> None:
     """Each library chooses, and a viewer never sees a private copy either way."""
-    fields = {} if setting is None else {"editors_see_private": setting}
+    fields = {} if setting is None else {"editors_see_personal": setting}
     library = make_library(api, owner, **fields)
     copy = make_copy(api, owner, library)
     editor, viewer = make_account(), make_account()
@@ -365,7 +386,7 @@ def test_turning_the_setting_off_hides_private_copies_at_once(
     editor = make_account()
     join(api, owner, editor, library, "editor")
     api.call(editor, "GET", f"/copies/{copy}")
-    changes = {"editors_see_private": False}
+    changes = {"editors_see_personal": False}
     api.call(editor, "PATCH", f"/libraries/{library}", changes, 403)
     api.call(owner, "PATCH", f"/libraries/{library}", changes)
     api.call(editor, "GET", f"/copies/{copy}", expect=404)
@@ -376,7 +397,7 @@ def test_setting_in_one_library_does_not_open_another(
 ) -> None:
     """An editor of one library gets nothing from a different library."""
     open_library = make_library(api, owner)
-    closed_library = make_library(api, owner, editors_see_private=False)
+    closed_library = make_library(api, owner, editors_see_personal=False)
     copy = make_copy(api, owner, closed_library)
     editor = make_account()
     join(api, owner, editor, open_library, "editor")
@@ -384,16 +405,35 @@ def test_setting_in_one_library_does_not_open_another(
 
 
 RESPONSE_MATRIX = [
-    ("private", "author", True),
-    ("private", "housemate", False),
-    ("private", "stranger", False),
-    ("household", "author", True),
-    ("household", "housemate", True),
-    ("household", "stranger", False),
-    ("instance", "author", True),
-    ("instance", "housemate", True),
-    ("instance", "stranger", True),
+    ("personal", "author", True),
+    ("personal", "insider", False),
+    ("personal", "stranger", False),
+    ("library", "author", True),
+    ("library", "insider", True),
+    ("library", "stranger", False),
+    ("group", "author", True),
+    ("group", "insider", True),
+    ("group", "stranger", False),
+    ("server", "author", True),
+    ("server", "insider", True),
+    ("server", "stranger", True),
 ]
+
+
+def audience_for(
+    api: Api,
+    make_account: MakeAccount,
+    author: Account,
+    privacy: str,
+    insider: Account,
+) -> dict[str, int]:
+    """Create the audience a privacy level needs, with the insider in it."""
+    if privacy == "group":
+        group = make_group(api, make_account, author, insider)
+        return {"audience_group_id": group}
+    library = make_library(api, author)
+    join(api, author, insider, library, "viewer")
+    return {"audience_library_id": library} if privacy == "library" else {}
 
 
 @pytest.mark.parametrize("kind", ["reviews", "notes"])
@@ -407,16 +447,13 @@ def test_response_privacy_matrix(  # noqa: PLR0913
     relation: str,
     visible: bool,
 ) -> None:
-    """A review's or note's privacy decides who can read it."""
-    library = make_library(api, owner)
+    """A review's or note's level and audience decide who can read it."""
+    insider, stranger = make_account(), make_account()
+    audience = audience_for(api, make_account, owner, privacy, insider)
     work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
-    body = {"text": "Good", "privacy": privacy}
+    body = {"text": "Good", "privacy": privacy, **audience}
     record = api.call(owner, "POST", f"/works/{work}/{kind}", body, 201)["id"]
-    reader = owner
-    if relation != "author":
-        reader = make_account()
-        if relation == "housemate":
-            join(api, owner, reader, library, "viewer")
+    reader = {"author": owner, "insider": insider, "stranger": stranger}[relation]
     api.call(reader, "GET", f"/{kind}/{record}", expect=200 if visible else 404)
     listed = api.call(reader, "GET", f"/works/{work}/{kind}")["items"]
     assert (record in [item["id"] for item in listed]) is visible
@@ -431,17 +468,269 @@ def test_rating_privacy_matrix(  # noqa: PLR0913
     relation: str,
     visible: bool,
 ) -> None:
-    """A rating's privacy decides who can see it in the list."""
-    library = make_library(api, owner)
+    """A rating's level and audience decide who can see it in the list."""
+    insider, stranger = make_account(), make_account()
+    audience = audience_for(api, make_account, owner, privacy, insider)
     work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
-    body = {"value": 8, "privacy": privacy}
+    body = {"value": 8, "privacy": privacy, **audience}
     api.call(owner, "PUT", f"/works/{work}/rating", body)
-    reader = owner
-    if relation != "author":
-        reader = make_account()
-        if relation == "housemate":
-            join(api, owner, reader, library, "viewer")
+    reader = {"author": owner, "insider": insider, "stranger": stranger}[relation]
     assert bool(api.call(reader, "GET", f"/works/{work}/ratings")["total"]) is visible
+
+
+# Prices
+
+
+def test_price_keeps_two_decimal_places_exactly(api: Api, owner: Account) -> None:
+    """A value that binary floats can't hold comes back unchanged."""
+    library = make_library(api, owner)
+    copy = make_copy(api, owner, library)
+    path = f"/copies/{copy}"
+    body = {"price": "12.99", "currency": "USD"}
+    assert api.call(owner, "PATCH", path, body)["price"] == "12.99"
+    assert api.call(owner, "GET", path)["price"] == "12.99"
+    assert api.call(owner, "PATCH", path, {"price": 0.1})["price"] == "0.10"
+    assert api.call(owner, "PATCH", path, {"price": "1000"})["price"] == "1000.00"
+    assert api.call(owner, "PATCH", path, {"price": None})["price"] is None
+
+
+@pytest.mark.parametrize("price", ["1.999", "-1.00", "NaN", "Infinity", "1e30"])
+def test_bad_prices_are_refused(api: Api, owner: Account, price: str) -> None:
+    """A price has at most two decimal places and can't be negative."""
+    library = make_library(api, owner)
+    copy = make_copy(api, owner, library)
+    api.call(owner, "PATCH", f"/copies/{copy}", {"price": price}, 422)
+
+
+def test_largest_price_fits_on_both_databases(api: Api, owner: Account) -> None:
+    """The top of the accepted range is stored without error."""
+    library = make_library(api, owner)
+    copy = make_copy(api, owner, library)
+    body = {"price": "9999999999.99"}
+    assert api.call(owner, "PATCH", f"/copies/{copy}", body)["price"] == "9999999999.99"
+
+
+# Audiences and groups
+
+
+@pytest.mark.parametrize("privacy", ["library", "group"])
+def test_shared_levels_need_an_audience(api: Api, owner: Account, privacy: str) -> None:
+    """Nothing reaches a library or group by accident."""
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": privacy}
+    api.call(owner, "POST", f"/works/{work}/reviews", body, 409)
+
+
+def test_cannot_share_to_a_library_you_are_not_in(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """An audience must be one you belong to."""
+    other = make_account()
+    library = make_library(api, other)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "library", "audience_library_id": library}
+    api.call(owner, "POST", f"/works/{work}/reviews", body, 404)
+
+
+def test_cannot_share_to_a_group_you_are_not_in(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Admins' groups aren't open to everyone."""
+    group = make_group(api, make_account)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "group", "audience_group_id": group}
+    api.call(owner, "POST", f"/works/{work}/reviews", body, 404)
+
+
+def test_patch_to_personal_clears_the_audience(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Pulling a review back removes it from its audience."""
+    insider = make_account()
+    group = make_group(api, make_account, owner, insider)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "group", "audience_group_id": group}
+    review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)
+    api.call(insider, "GET", f"/reviews/{review['id']}")
+    changed = api.call(
+        owner, "PATCH", f"/reviews/{review['id']}", {"privacy": "personal"}
+    )
+    assert changed["audience_group_id"] is None
+    api.call(insider, "GET", f"/reviews/{review['id']}", expect=404)
+
+
+def test_patch_cannot_share_to_a_group_you_left(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Changing the audience checks membership again."""
+    other_group = make_group(api, make_account)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    review = api.call(owner, "POST", f"/works/{work}/reviews", {"text": "Good"}, 201)
+    body = {"privacy": "group", "audience_group_id": other_group}
+    api.call(owner, "PATCH", f"/reviews/{review['id']}", body, 404)
+
+
+def test_removed_group_member_loses_access_at_once(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Membership decides access on every request."""
+    admin = make_account("admin", scopes=("admin",))
+    reader = make_account()
+    group = api.call(admin, "POST", "/groups", {"name": "Friends"}, 201)["id"]
+    for member in (owner, reader):
+        api.call(admin, "PUT", f"/groups/{group}/members/{member.id}", expect=204)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "group", "audience_group_id": group}
+    review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)["id"]
+    api.call(reader, "GET", f"/reviews/{review}")
+    api.call(admin, "DELETE", f"/groups/{group}/members/{reader.id}", expect=204)
+    api.call(reader, "GET", f"/reviews/{review}", expect=404)
+
+
+def test_author_who_leaves_a_group_stays_shared_and_can_edit(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Leaving doesn't delete what someone wrote there."""
+    admin = make_account("admin", scopes=("admin",))
+    reader = make_account()
+    group = api.call(admin, "POST", "/groups", {"name": "Friends"}, 201)["id"]
+    for member in (owner, reader):
+        api.call(admin, "PUT", f"/groups/{group}/members/{member.id}", expect=204)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "group", "audience_group_id": group}
+    review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)["id"]
+    api.call(admin, "DELETE", f"/groups/{group}/members/{owner.id}", expect=204)
+    api.call(reader, "GET", f"/reviews/{review}")
+    api.call(owner, "PATCH", f"/reviews/{review}", {"text": "Better"})
+
+
+def test_deactivated_authors_records_stop_being_shared(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Deactivating an account takes its shared writing out of view."""
+    admin = make_account("admin", scopes=("admin",))
+    reader = make_account()
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "server"}
+    review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)["id"]
+    api.call(reader, "GET", f"/reviews/{review}")
+    api.call(admin, "PATCH", f"/users/{owner.id}", {"is_active": False})
+    api.call(reader, "GET", f"/reviews/{review}", expect=404)
+
+
+def test_deleting_a_group_leaves_its_records_with_their_authors(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """With no audience left, a group record is visible only to its author."""
+    admin = make_account("admin", scopes=("admin",))
+    reader = make_account()
+    group = api.call(admin, "POST", "/groups", {"name": "Friends"}, 201)["id"]
+    for member in (owner, reader):
+        api.call(admin, "PUT", f"/groups/{group}/members/{member.id}", expect=204)
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "group", "audience_group_id": group}
+    review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)["id"]
+    api.call(admin, "DELETE", f"/groups/{group}", expect=204)
+    api.call(owner, "GET", f"/reviews/{review}")
+    api.call(reader, "GET", f"/reviews/{review}", expect=404)
+
+
+def test_only_a_library_owner_in_the_group_can_add_the_library(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """A library joins a group only by its owner's choice, and only their group."""
+    editor = make_account()
+    library = make_library(api, owner)
+    join(api, owner, editor, library, "editor")
+    group = make_group(api, make_account, editor)
+    path = f"/groups/{group}/libraries/{library}"
+    api.call(editor, "PUT", path, expect=403)
+    api.call(owner, "PUT", path, expect=404)
+
+
+def test_library_owner_or_admin_can_take_a_library_out_of_a_group(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Members can't remove someone else's library."""
+    admin = make_account("admin", scopes=("library:write", "admin"))
+    member = make_account()
+    library = make_library(api, owner)
+    group = make_group(api, make_account, owner, member)
+    path = f"/groups/{group}/libraries/{library}"
+    api.call(owner, "PUT", path, expect=204)
+    api.call(member, "DELETE", path, expect=403)
+    api.call(owner, "DELETE", path, expect=204)
+    api.call(owner, "PUT", path, expect=204)
+    api.call(admin, "DELETE", path, expect=204)
+
+
+def test_groups_are_listed_only_for_their_members(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """A stranger can't see a group, its members, or its libraries."""
+    stranger = make_account()
+    library = make_library(api, owner)
+    group = make_group(api, make_account, owner)
+    api.call(owner, "PUT", f"/groups/{group}/libraries/{library}", expect=204)
+    assert api.call(owner, "GET", "/groups")["total"] == 1
+    assert api.call(stranger, "GET", "/groups")["total"] == 0
+    for suffix in ("", "/members", "/libraries"):
+        api.call(stranger, "GET", f"/groups/{group}{suffix}", expect=404)
+    members = api.call(owner, "GET", f"/groups/{group}/members")["items"]
+    assert [item["user_id"] for item in members] == [owner.id]
+    libraries = api.call(owner, "GET", f"/groups/{group}/libraries")["items"]
+    assert [item["library_id"] for item in libraries] == [library]
+
+
+def test_admin_manages_groups_without_reading_their_records(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Managing a group gives no access to what is shared in it."""
+    admin = make_account("admin", scopes=("library:read", "admin"))
+    group = api.call(admin, "POST", "/groups", {"name": "Friends"}, 201)["id"]
+    api.call(admin, "PUT", f"/groups/{group}/members/{owner.id}", expect=204)
+    assert api.call(admin, "GET", "/groups/all")["total"] == 1
+    api.call(admin, "PATCH", f"/groups/{group}", {"name": "Family"})
+    assert api.call(admin, "GET", f"/groups/{group}/members")["total"] == 1
+    work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
+    body = {"text": "Good", "privacy": "group", "audience_group_id": group}
+    review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)["id"]
+    api.call(admin, "GET", f"/reviews/{review}", expect=404)
+
+
+# Ownership transfer
+
+
+def test_admin_can_transfer_a_stranded_library(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """A library doesn't get stuck when its owner leaves."""
+    admin = make_account("admin", scopes=("admin",))
+    heir = make_account()
+    library = make_library(api, owner)
+    path = f"/libraries/{library}/transfer"
+    moved = api.call(admin, "POST", path, {"owner_id": heir.id})
+    assert moved["owner_id"] == heir.id
+    api.call(heir, "PATCH", f"/libraries/{library}", {"name": "Mine now"})
+    api.call(owner, "PATCH", f"/libraries/{library}", {"name": "Back"}, 403)
+    members = api.call(heir, "GET", f"/libraries/{library}/members")["items"]
+    roles = {item["user_id"]: item["role"] for item in members}
+    assert roles == {heir.id: "owner", owner.id: "editor"}
+    events = api.call(admin, "GET", "/audit-events")["items"]
+    assert events[0]["action"] == "library_transferred"
+
+
+def test_transfer_needs_an_active_user(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Ownership can't move to an account that can't use it."""
+    admin = make_account("admin", scopes=("admin",))
+    gone = make_account()
+    api.call(admin, "PATCH", f"/users/{gone.id}", {"is_active": False})
+    library = make_library(api, owner)
+    path = f"/libraries/{library}/transfer"
+    api.call(admin, "POST", path, {"owner_id": gone.id}, 409)
+    api.call(admin, "POST", path, {"owner_id": 999999}, 404)
 
 
 # Cross-record checks
@@ -453,7 +742,7 @@ def test_visible_reviews_can_only_be_changed_by_their_author(
     """Being able to read a review doesn't let you edit it."""
     other = make_account()
     work = api.call(owner, "POST", "/works", {"title": "Dune"}, 201)["id"]
-    body = {"text": "Good", "privacy": "instance"}
+    body = {"text": "Good", "privacy": "server"}
     review = api.call(owner, "POST", f"/works/{work}/reviews", body, 201)["id"]
     api.call(other, "PATCH", f"/reviews/{review}", {"text": "Bad"}, 403)
     api.call(other, "DELETE", f"/reviews/{review}", expect=403)
@@ -516,7 +805,7 @@ def test_loan_cannot_lend_a_copy_you_cannot_edit(
         other, "POST", f"/libraries/{other_library}/borrowers", {"name": "Them"}, 201
     )
     library = make_library(api, owner)
-    copy = make_copy(api, owner, library, "instance")
+    copy = make_copy(api, owner, library, "server")
     body = {"copy_id": copy, "borrower_id": borrower["id"], "lent": "2026-01-01"}
     api.call(other, "POST", "/loans", body, 404)
     api.call(other, "PATCH", f"/copies/{copy}", {"location": "Mine"}, 404)

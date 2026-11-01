@@ -61,7 +61,7 @@ Htmx 2.0.11 is [npm's `latest`, while 4.0.0 is tagged `next`](https://registry.n
 
 ## Data model
 
-Names are logical. **Decided:** each table arrives with the phase that uses it, so no schema is guessed ahead of its feature. Phase 2 builds the bibliographic and personal records, except `ExternalLink` and the Kosync tables, plus `User`, `ApiToken`, `AuditEvent`, `Setting`, and a `RateLimitCounter` for shared limits. `Session` waits for Phase 3, `Job` for Phase 5, `ExternalIdentity` for Phase 6, `PluginState` for Phase 7, `OAuthClient` and `OAuthGrant` for Phase 8, and `ExternalLink`, the Kosync tables, and `KosyncCredential` for Phase 9.
+Names are logical. **Decided:** each table arrives with the phase that uses it, so no schema is guessed ahead of its feature. Phase 2 builds the bibliographic and personal records, except `ExternalLink` and the Kosync tables, plus the group tables, `User`, `ApiToken`, `AuditEvent`, `Setting`, and a `RateLimitCounter` for shared limits. `Session` waits for Phase 3, `Job` for Phase 5, `ExternalIdentity` for Phase 6, `PluginState` for Phase 7, `OAuthClient` and `OAuthGrant` for Phase 8, and `ExternalLink`, the Kosync tables, and `KosyncCredential` for Phase 9.
 
 ### Bibliographic records (shared within an instance)
 
@@ -94,15 +94,28 @@ ISBNs are stored normalized as ISBN-13 where possible. An ISBN-10 is derivable, 
 | `ExternalLink` | Link to a server's ebook or audiobook | `edition_id`, plugin, external ID, URL |
 | `KosyncDocument`, `KosyncProgress` | KOReader sync | hash, `edition_id` (nullable); user, progress, device, timestamp |
 
-**Privacy:** each copy, rating, review, and note is `private`, `household`, or `instance`. There is no anonymous public access in the required scope.
+**Groups:** `Group`, `GroupMember`, and `GroupLibrary`. A group holds users and libraries, and both can belong to several groups. Admins create groups and manage their members. A library owner can add their own library to a group they belong to. The owner or an admin can take it out.
 
-**Proposed, awaiting the maintainer's decision:** Phase 2 built these rules, and they can still change.
+**Privacy (decided):** each copy, rating, review, and note has one of four levels. A server serves one household, and groups don't separate households, because all groups share one catalog and one set of admins.
 
-- **Copies:** `private` is for the library's owner, and for its editors unless the owner turns off the library's `editors_see_private` setting. It is on by default. `household` for its members, and `instance` for everyone signed in.
-- **Ratings, reviews, and notes:** `private` is for the author, `household` for anyone who shares a library with the author, and `instance` for everyone signed in.
-- **Admins:** the admin role gives no access to other people's personal records.
-- **Shared catalog:** any user who isn't a guest can create and edit works, editions, people, and series. Deleting them needs the admin scope.
-- **Sizes:** prices are stored as an integer of minor units with a currency code, and ratings are half stars from 1 to 10.
+| Level | Copy | Rating, review, or note |
+|---|---|---|
+| `personal` | The library's owner, and its editors unless the owner turns off the library's `editors_see_personal` setting. It is on by default. | The author |
+| `library` | Adds the library's members | Members of a library the author chooses |
+| `group` | Adds members of any group that includes the library | Members of a group the author chooses |
+| `server` | Everyone signed in | Everyone signed in |
+
+- **Defaults:** new libraries default to `personal`.
+- **Audience:** a rating, review, or note at `library` or `group` level names its audience, and the author must belong to it.
+- **Leaving:** someone removed from a library or group loses access at once. What they wrote there stays shared until they change it or an admin deactivates their account. Records whose audience is deleted stay visible to their authors.
+- **Admins:** the admin role gives no routine access to personal records, and managing a group gives no access to what is shared in it. This isn't a guarantee: an admin can reset a password, which the audit trail records, and whoever runs the server can read its database.
+- **Ownership:** an admin can transfer a library to a new owner, so that a departure can't strand it. The old owner stays on as an editor.
+
+**Shared catalog (decided for now):** any user who isn't a guest can create and edit works, editions, people, and series. Deleting them needs the admin scope. Catalog edits aren't audited yet. Changing this rule later needs no data migration.
+
+**Prices (decided):** a copy's price has two decimal places and a currency code. The API sends it as a string, such as `"12.99"`, and it is stored as a whole number of hundredths, so it stays exact on both databases.
+
+**Proposed, awaiting the maintainer's decision:** ratings are half stars from 1 to 10.
 
 ### System records
 

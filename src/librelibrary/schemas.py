@@ -1,6 +1,7 @@
 """Request and response shapes, shared by the API and later surfaces."""
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Annotated, Any
 
 from pydantic import (
@@ -10,6 +11,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    field_serializer,
 )
 
 from librelibrary.authz.policy import LibraryRole, Privacy, Role, Scope
@@ -53,6 +55,7 @@ Email = Annotated[
 ]
 Id = Annotated[int, Field(ge=1, le=2_147_483_647)]
 Count = Annotated[int, Field(ge=0, le=2_147_483_647)]
+Price = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2)]
 StarValue = Annotated[int, Field(ge=1, le=10)]
 
 
@@ -374,8 +377,8 @@ class LibraryIn(_In):
     """Create a library."""
 
     name: Str200
-    default_privacy: Privacy = Privacy.PRIVATE
-    editors_see_private: bool = True
+    default_privacy: Privacy = Privacy.PERSONAL
+    editors_see_personal: bool = True
 
 
 class LibraryPatch(_In):
@@ -383,7 +386,7 @@ class LibraryPatch(_In):
 
     name: Str200 | None = None
     default_privacy: Privacy | None = None
-    editors_see_private: bool | None = None
+    editors_see_personal: bool | None = None
 
 
 class LibraryOut(_Out):
@@ -393,7 +396,38 @@ class LibraryOut(_Out):
     owner_id: int
     name: str
     default_privacy: Privacy
-    editors_see_private: bool
+    editors_see_personal: bool
+
+
+class LibraryTransferIn(_In):
+    """Name a library's new owner."""
+
+    owner_id: Id
+
+
+class GroupIn(_In):
+    """Create or rename a group."""
+
+    name: Str200
+
+
+class GroupOut(_Out):
+    """A group."""
+
+    id: int
+    name: str
+
+
+class GroupMemberOut(_Out):
+    """A user in a group."""
+
+    user_id: int
+
+
+class GroupLibraryOut(_Out):
+    """A library in a group."""
+
+    library_id: int
 
 
 class MemberIn(_In):
@@ -418,7 +452,7 @@ class CopyIn(_In):
     location: Str200 | None = None
     acquired: date | None = None
     source: Str200 | None = None
-    price_minor: Count | None = None
+    price: Price | None = None
     currency: Str3 | None = None
     privacy: Privacy | None = None
 
@@ -430,13 +464,13 @@ class CopyPatch(_In):
     location: Str200 | None = None
     acquired: date | None = None
     source: Str200 | None = None
-    price_minor: Count | None = None
+    price: Price | None = None
     currency: Str3 | None = None
     privacy: Privacy | None = None
 
 
 class CopyOut(_Out):
-    """A copy."""
+    """A copy. The price is a string with two decimal places, such as "12.99"."""
 
     id: int
     library_id: int
@@ -445,9 +479,13 @@ class CopyOut(_Out):
     location: str | None
     acquired: date | None
     source: str | None
-    price_minor: int | None
+    price: Decimal | None
     currency: str | None
     privacy: Privacy
+
+    @field_serializer("price")
+    def _two_places(self, value: Decimal | None) -> str | None:
+        return None if value is None else f"{value:.2f}"
 
 
 class TagNamesIn(_In):
@@ -580,7 +618,9 @@ class RatingIn(_In):
     """Rate a work, in half stars from 1 to 10."""
 
     value: StarValue
-    privacy: Privacy = Privacy.PRIVATE
+    privacy: Privacy = Privacy.PERSONAL
+    audience_library_id: Id | None = None
+    audience_group_id: Id | None = None
 
 
 class RatingOut(_Out):
@@ -591,13 +631,17 @@ class RatingOut(_Out):
     work_id: int
     value: int
     privacy: Privacy
+    audience_library_id: int | None
+    audience_group_id: int | None
 
 
 class ResponseIn(_In):
     """Write a review or note."""
 
     text: LongText
-    privacy: Privacy = Privacy.PRIVATE
+    privacy: Privacy = Privacy.PERSONAL
+    audience_library_id: Id | None = None
+    audience_group_id: Id | None = None
 
 
 class ResponsePatch(_In):
@@ -605,6 +649,8 @@ class ResponsePatch(_In):
 
     text: LongText | None = None
     privacy: Privacy | None = None
+    audience_library_id: Id | None = None
+    audience_group_id: Id | None = None
 
 
 class ResponseOut(_Out):
@@ -615,6 +661,8 @@ class ResponseOut(_Out):
     work_id: int
     text: str
     privacy: Privacy
+    audience_library_id: int | None
+    audience_group_id: int | None
     created_at: datetime
 
 

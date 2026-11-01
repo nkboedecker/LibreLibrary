@@ -70,6 +70,12 @@ def upgrade() -> None:
     sa.UniqueConstraint('email', name=op.f('uq_user_account_email')),
     sa.UniqueConstraint('username', name=op.f('uq_user_account_username'))
     )
+    op.create_table('user_group',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=200), nullable=False),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_user_group')),
+    sa.UniqueConstraint('name', name=op.f('uq_user_group_name'))
+    )
     op.create_table('work',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=1000), nullable=False),
@@ -138,47 +144,27 @@ def upgrade() -> None:
     with op.batch_alter_table('edition', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_edition_work_id'), ['work_id'], unique=False)
 
+    op.create_table('group_member',
+    sa.Column('group_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['group_id'], ['user_group.id'], name=op.f('fk_group_member_group_id_user_group'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_group_member_user_id_user_account'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('group_id', 'user_id', name=op.f('pk_group_member'))
+    )
+    with op.batch_alter_table('group_member', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_group_member_user_id'), ['user_id'], unique=False)
+
     op.create_table('library',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('owner_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=200), nullable=False),
     sa.Column('default_privacy', sa.String(length=16), nullable=False),
-    sa.Column('editors_see_private', sa.Boolean(), nullable=False),
+    sa.Column('editors_see_personal', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['owner_id'], ['user_account.id'], name=op.f('fk_library_owner_id_user_account'), ondelete='RESTRICT'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_library'))
     )
     with op.batch_alter_table('library', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_library_owner_id'), ['owner_id'], unique=False)
-
-    op.create_table('note',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('work_id', sa.Integer(), nullable=False),
-    sa.Column('text', sa.Text(), nullable=False),
-    sa.Column('privacy', sa.String(length=16), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_note_user_id_user_account'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['work_id'], ['work.id'], name=op.f('fk_note_work_id_work'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_note'))
-    )
-    with op.batch_alter_table('note', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_note_user_id'), ['user_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_note_work_id'), ['work_id'], unique=False)
-
-    op.create_table('rating',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('work_id', sa.Integer(), nullable=False),
-    sa.Column('value', sa.Integer(), nullable=False),
-    sa.Column('privacy', sa.String(length=16), nullable=False),
-    sa.CheckConstraint('value BETWEEN 1 AND 10', name=op.f('ck_rating_value_range')),
-    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_rating_user_id_user_account'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['work_id'], ['work.id'], name=op.f('fk_rating_work_id_work'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_rating')),
-    sa.UniqueConstraint('user_id', 'work_id', name=op.f('uq_rating_user_id'))
-    )
-    with op.batch_alter_table('rating', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_rating_work_id'), ['work_id'], unique=False)
 
     op.create_table('reading_state',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -194,21 +180,6 @@ def upgrade() -> None:
     with op.batch_alter_table('reading_state', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_reading_state_user_id'), ['user_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_reading_state_work_id'), ['work_id'], unique=False)
-
-    op.create_table('review',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('work_id', sa.Integer(), nullable=False),
-    sa.Column('text', sa.Text(), nullable=False),
-    sa.Column('privacy', sa.String(length=16), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_review_user_id_user_account'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['work_id'], ['work.id'], name=op.f('fk_review_work_id_work'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_review'))
-    )
-    with op.batch_alter_table('review', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_review_user_id'), ['user_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_review_work_id'), ['work_id'], unique=False)
 
     op.create_table('series_entry',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -267,7 +238,7 @@ def upgrade() -> None:
     sa.Column('location', sa.String(length=200), nullable=True),
     sa.Column('acquired', sa.Date(), nullable=True),
     sa.Column('source', sa.String(length=200), nullable=True),
-    sa.Column('price_minor', sa.Integer(), nullable=True),
+    sa.Column('price', sa.BigInteger(), nullable=True),
     sa.Column('currency', sa.String(length=3), nullable=True),
     sa.Column('privacy', sa.String(length=16), nullable=False),
     sa.ForeignKeyConstraint(['edition_id'], ['edition.id'], name=op.f('fk_copy_edition_id_edition'), ondelete='RESTRICT'),
@@ -277,6 +248,16 @@ def upgrade() -> None:
     with op.batch_alter_table('copy', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_copy_edition_id'), ['edition_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_copy_library_id'), ['library_id'], unique=False)
+
+    op.create_table('group_library',
+    sa.Column('group_id', sa.Integer(), nullable=False),
+    sa.Column('library_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['group_id'], ['user_group.id'], name=op.f('fk_group_library_group_id_user_group'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['library_id'], ['library.id'], name=op.f('fk_group_library_library_id_library'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('group_id', 'library_id', name=op.f('pk_group_library'))
+    )
+    with op.batch_alter_table('group_library', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_group_library_library_id'), ['library_id'], unique=False)
 
     op.create_table('identifier',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -313,6 +294,69 @@ def upgrade() -> None:
     )
     with op.batch_alter_table('metadata_source', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_metadata_source_edition_id'), ['edition_id'], unique=False)
+
+    op.create_table('note',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('work_id', sa.Integer(), nullable=False),
+    sa.Column('text', sa.Text(), nullable=False),
+    sa.Column('privacy', sa.String(length=16), nullable=False),
+    sa.Column('audience_library_id', sa.Integer(), nullable=True),
+    sa.Column('audience_group_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['audience_group_id'], ['user_group.id'], name=op.f('fk_note_audience_group_id_user_group'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['audience_library_id'], ['library.id'], name=op.f('fk_note_audience_library_id_library'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_note_user_id_user_account'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['work_id'], ['work.id'], name=op.f('fk_note_work_id_work'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_note'))
+    )
+    with op.batch_alter_table('note', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_note_audience_group_id'), ['audience_group_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_note_audience_library_id'), ['audience_library_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_note_user_id'), ['user_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_note_work_id'), ['work_id'], unique=False)
+
+    op.create_table('rating',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('work_id', sa.Integer(), nullable=False),
+    sa.Column('value', sa.Integer(), nullable=False),
+    sa.Column('privacy', sa.String(length=16), nullable=False),
+    sa.Column('audience_library_id', sa.Integer(), nullable=True),
+    sa.Column('audience_group_id', sa.Integer(), nullable=True),
+    sa.CheckConstraint('value BETWEEN 1 AND 10', name=op.f('ck_rating_value_range')),
+    sa.ForeignKeyConstraint(['audience_group_id'], ['user_group.id'], name=op.f('fk_rating_audience_group_id_user_group'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['audience_library_id'], ['library.id'], name=op.f('fk_rating_audience_library_id_library'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_rating_user_id_user_account'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['work_id'], ['work.id'], name=op.f('fk_rating_work_id_work'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_rating')),
+    sa.UniqueConstraint('user_id', 'work_id', name=op.f('uq_rating_user_id'))
+    )
+    with op.batch_alter_table('rating', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_rating_audience_group_id'), ['audience_group_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_rating_audience_library_id'), ['audience_library_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_rating_work_id'), ['work_id'], unique=False)
+
+    op.create_table('review',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('work_id', sa.Integer(), nullable=False),
+    sa.Column('text', sa.Text(), nullable=False),
+    sa.Column('privacy', sa.String(length=16), nullable=False),
+    sa.Column('audience_library_id', sa.Integer(), nullable=True),
+    sa.Column('audience_group_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['audience_group_id'], ['user_group.id'], name=op.f('fk_review_audience_group_id_user_group'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['audience_library_id'], ['library.id'], name=op.f('fk_review_audience_library_id_library'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], name=op.f('fk_review_user_id_user_account'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['work_id'], ['work.id'], name=op.f('fk_review_work_id_work'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_review'))
+    )
+    with op.batch_alter_table('review', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_review_audience_group_id'), ['audience_group_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_review_audience_library_id'), ['audience_library_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_review_user_id'), ['user_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_review_work_id'), ['work_id'], unique=False)
 
     op.create_table('shelf',
     sa.Column('id', sa.Integer(), nullable=False),

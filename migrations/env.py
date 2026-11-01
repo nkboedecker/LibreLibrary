@@ -7,7 +7,7 @@ from alembic.autogenerate.api import AutogenContext
 from sqlalchemy.engine import Connection
 
 import librelibrary.models  # noqa: F401
-from librelibrary.db import Base, UTCDateTime, make_engine
+from librelibrary.db import Base, Hundredths, UTCDateTime, make_engine
 from librelibrary.settings import Settings
 
 
@@ -21,6 +21,8 @@ def render_item(
     """
     if type_ == "type" and isinstance(obj, UTCDateTime):
         return "sa.DateTime(timezone=True)"
+    if type_ == "type" and isinstance(obj, Hundredths):
+        return "sa.BigInteger()"
     return False
 
 

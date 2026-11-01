@@ -12,5 +12,6 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - A REST API under `/api/v1` for works, editions, people, series, libraries, copies, tags, shelves, borrowers, loans, readings, ratings, reviews, notes, users, tokens, settings, and the audit trail.
 - Password sign-in that issues hashed, revocable personal access tokens, with rate limits that hold across workers.
 - Roles, token scopes, library roles, and per-record privacy, enforced by one policy layer.
+- Four privacy levels (personal, library, group, and server), groups of users and libraries, and admin transfer of library ownership.
 - Database migrations that run at startup, on SQLite and PostgreSQL.
 - The `librelibrary` command, with `create-admin` and `migrate`.
