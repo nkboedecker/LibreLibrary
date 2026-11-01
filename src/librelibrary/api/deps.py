@@ -48,7 +48,8 @@ def get_settings(request: Request) -> Settings:
     return cast(Settings, request.app.state.settings)
 
 
-def _is_trusted(address: str, proxies: list[str]) -> bool:
+def is_trusted_proxy(address: str, proxies: list[str]) -> bool:
+    """Say whether an address is one of the trusted proxies or inside their networks."""
     try:
         parsed = ipaddress.ip_address(address)
     except ValueError:
@@ -69,11 +70,11 @@ def client_ip(request: Request, settings: Settings) -> str:
     the entries that trusted proxies added can be believed.
     """
     peer = request.client.host if request.client else "unknown"
-    if not _is_trusted(peer, settings.trusted_proxies):
+    if not is_trusted_proxy(peer, settings.trusted_proxies):
         return peer
     forwarded = request.headers.get("x-forwarded-for", "")
     hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
     for hop in reversed(hops):
-        if not _is_trusted(hop, settings.trusted_proxies):
+        if not is_trusted_proxy(hop, settings.trusted_proxies):
             return hop
     return peer
