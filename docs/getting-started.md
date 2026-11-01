@@ -51,9 +51,9 @@ Set these environment variables to configure the server:
 | `LIBRELIBRARY_LOGIN_RATE_LIMIT_PER_IP` | `20/minute` | Sign-in attempts allowed from one address. |
 | `LIBRELIBRARY_LOGIN_RATE_LIMIT_PER_USERNAME` | `10/minute` | Sign-in and password-change attempts allowed for one username. |
 | `LIBRELIBRARY_LOGIN_TOKEN_LIFETIME_DAYS` | `30` | How long a sign-in token lasts. |
-| `LIBRELIBRARY_TRUSTED_PROXIES` | `[]` | A JSON list of proxy addresses or networks, such as `["192.0.2.0/24"]`. `X-Forwarded-For` is read only from these. |
+| `LIBRELIBRARY_TRUSTED_PROXIES` | `[]` | A JSON list of proxy addresses or networks, such as `["192.0.2.0/24"]`. `X-Forwarded-For` and `X-Forwarded-Proto` are read only from these. |
 
-If you run the server behind a reverse proxy, set `LIBRELIBRARY_TRUSTED_PROXIES`. Otherwise, all clients share one sign-in limit, because they all appear to come from the proxy.
+If you run the server behind a reverse proxy, set `LIBRELIBRARY_TRUSTED_PROXIES`. Otherwise, all clients share one sign-in limit, because they all appear to come from the proxy, and redirects point at `http://` instead of `https://`.
 
 ## API reference
 
