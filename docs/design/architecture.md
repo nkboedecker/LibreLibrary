@@ -1,6 +1,6 @@
 # LibreLibrary architecture
 
-**Status:** decisions recorded, awaiting the maintainer's final approval. Every source was checked on 2026-10-31.
+**Status:** approved by the maintainer on 2026-10-31. Every source was checked on 2026-10-31.
 
 ## How to read this document
 

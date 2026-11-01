@@ -2,15 +2,6 @@
 
 Apply these by hand. They can't be set from files in the repository.
 
-## Placeholders
-
-Replace `OWNER` in these files with the GitHub account:
-
-- `.github/CODEOWNERS`
-- `.github/ISSUE_TEMPLATE/config.yml`
-
-Replace the reporting contact placeholder in `CODE_OF_CONDUCT.md`.
-
 ## General
 
 - **Merge methods:** allow squash and merge commits, and turn off rebase merges.
@@ -20,10 +11,10 @@ Replace the reporting contact placeholder in `CODE_OF_CONDUCT.md`.
 
 ## Ruleset for `main`
 
-- Require a pull request, with one approval and review from code owners.
+- Require a pull request, with no required approvals. GitHub doesn't let authors approve their own pull requests, so a sole maintainer can't meet an approval rule. When a second maintainer joins, require one approval and review from code owners.
 - Require signed commits.
 - Block force pushes and deletions.
-- Require these status checks: `checks`, `tests (3.13)`, `tests (3.14)`, `postgres`, `image`, `pr`, and `analyze`.
+- Require these status checks: `checks`, `tests (3.13)`, `tests (3.14)`, `postgres (3.13)`, `postgres (3.14)`, `image`, `pr`, and `analyze`.
 
 ## Ruleset for tags
 
