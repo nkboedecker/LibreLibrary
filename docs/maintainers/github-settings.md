@@ -12,9 +12,10 @@ Apply these by hand. They can't be set from files in the repository.
 ## Ruleset for `main`
 
 - Require a pull request, with no required approvals. GitHub doesn't let authors approve their own pull requests, so a sole maintainer can't meet an approval rule. When a second maintainer joins, require one approval and review from code owners.
+- Require conversation resolution before merging.
 - Require signed commits.
 - Block force pushes and deletions.
-- Require these status checks: `checks`, `tests (3.13)`, `tests (3.14)`, `postgres (3.13)`, `postgres (3.14)`, `image`, `pr`, and `analyze`.
+- Require these status checks, each with its source set to GitHub Actions: `checks`, `tests (3.13)`, `tests (3.14)`, `postgres (3.13)`, `postgres (3.14)`, `image`, `pr`, and `analyze`.
 
 ## Ruleset for tags
 
