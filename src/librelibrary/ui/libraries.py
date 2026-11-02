@@ -15,6 +15,8 @@ from librelibrary.schemas import (
     LibraryPatch,
     MemberOut,
     Page,
+    ShelfOut,
+    TagOut,
 )
 from librelibrary.services import libraries
 from librelibrary.ui import ui_route
@@ -142,6 +144,12 @@ def library_detail(
         )
     )
     labels = edition_labels(session, user.actor, [c.edition_id for c in copies.items])
+    shelves = Page[ShelfOut].model_validate(
+        libraries.list_shelves(session, user.actor, library_id, ALL, 0)
+    )
+    tags = Page[TagOut].model_validate(
+        libraries.list_tags(session, user.actor, library_id, ALL, 0)
+    )
     return templates.TemplateResponse(
         request,
         "library.html",
@@ -153,6 +161,8 @@ def library_detail(
             "can_manage": allowed(user.actor, Action.LIBRARY_MANAGE, resource),
             "can_edit": allowed(user.actor, Action.LIBRARY_EDIT, resource),
             "members": members,
+            "shelves": shelves,
+            "tags": tags,
             "copies": copies,
             "labels": labels,
             "page": page,

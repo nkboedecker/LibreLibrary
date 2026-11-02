@@ -206,6 +206,15 @@ def set_copy_tags(
     return [TagOut.model_validate(tag) for tag in tags]
 
 
+@router.get("/copies/{copy_id}/shelves", operation_id="copy_shelves_list")
+def list_copy_shelves(
+    copy_id: PathId, session: DbSession, actor: CurrentActor
+) -> list[ShelfOut]:
+    """List the shelves that hold a copy. Only members of its library see them."""
+    shelves = libraries.list_copy_shelves(session, actor, copy_id)
+    return [ShelfOut.model_validate(shelf) for shelf in shelves]
+
+
 @router.get("/libraries/{library_id}/tags", operation_id="tags_list")
 def list_tags(
     library_id: PathId,

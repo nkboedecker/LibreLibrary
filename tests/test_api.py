@@ -928,6 +928,48 @@ def test_an_editor_who_cannot_see_a_copy_cannot_probe_a_shelf_for_it(
     assert api.call(owner, "GET", f"/shelves/{shelf['id']}/copies")["total"] == 1
 
 
+def test_a_copy_lists_the_shelves_it_is_on(api: Api, owner: Account) -> None:
+    """Members can ask which shelves hold a copy."""
+    library = make_library(api, owner)
+    copy = make_copy(api, owner, library)
+    first = api.call(owner, "POST", f"/libraries/{library}/shelves", {"name": "B"}, 201)
+    second = api.call(
+        owner, "POST", f"/libraries/{library}/shelves", {"name": "A"}, 201
+    )
+    api.call(owner, "POST", f"/libraries/{library}/shelves", {"name": "C"}, 201)
+    for shelf in (first, second):
+        api.call(owner, "PUT", f"/shelves/{shelf['id']}/copies/{copy}", expect=204)
+
+    shelves = api.call(owner, "GET", f"/copies/{copy}/shelves")
+
+    assert [shelf["name"] for shelf in shelves] == ["A", "B"]
+
+
+def test_a_non_member_sees_no_shelves_of_a_server_wide_copy(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Shelf names belong to the library's members."""
+    stranger = make_account()
+    library = make_library(api, owner)
+    copy = make_copy(api, owner, library, "server")
+    shelf = api.call(owner, "POST", f"/libraries/{library}/shelves", {"name": "S"}, 201)
+    api.call(owner, "PUT", f"/shelves/{shelf['id']}/copies/{copy}", expect=204)
+
+    assert api.call(stranger, "GET", f"/copies/{copy}")["id"] == copy
+    assert api.call(stranger, "GET", f"/copies/{copy}/shelves") == []
+
+
+def test_a_hidden_copys_shelves_are_a_404(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """A personal copy looks like it doesn't exist."""
+    stranger = make_account()
+    library = make_library(api, owner)
+    copy = make_copy(api, owner, library)
+
+    api.call(stranger, "GET", f"/copies/{copy}/shelves", expect=404)
+
+
 def test_copy_tags_replace_and_stay_in_their_library(api: Api, owner: Account) -> None:
     """Tags are per library, and a set replaces the old one."""
     library = make_library(api, owner)

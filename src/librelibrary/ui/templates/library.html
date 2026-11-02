@@ -19,6 +19,19 @@
     {% endfor %}
   </tbody>
 </table>
+<h2>Shelves</h2>
+{% if can_edit %}<p><a href="/libraries/{{ library.id }}/shelves/new">Add a shelf</a></p>{% endif %}
+{% if shelves.items %}
+<ul>{% for shelf in shelves.items %}<li><a href="/shelves/{{ shelf.id }}">{{ shelf.name }}</a> ({{ shelf.kind | kind_label | lower }})</li>{% endfor %}</ul>
+{% else %}
+<p>There are no shelves yet.</p>
+{% endif %}
+<h2>Tags</h2>
+{% if tags.items %}
+<ul class="tags">{% for tag in tags.items %}<li>{{ tag.name }}</li>{% endfor %}</ul>
+{% else %}
+<p>There are no tags yet. Add tags on a copy's page.</p>
+{% endif %}
 <h2>Copies</h2>
 {% if can_edit %}
 <p>To add a copy, <a href="/works">find the work</a>, then choose “Add a copy” on one of its editions.</p>

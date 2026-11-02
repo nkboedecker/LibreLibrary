@@ -24,3 +24,5 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - A web interface foundation: browser sign-in and sign-out with server-side cookie sessions, CSRF protection, a searchable, paged list of works, and work pages to view, add, edit, and delete.
 - Web pages for libraries, copies, and editions: list and open the libraries you belong to, add and change a library and its settings, add copies from an edition, and edit or delete a copy. Each page offers only what your role allows.
 - Library member lists in the API now include each member's display name.
+- Web pages for tags and shelves: set a copy's tags from its page, create, rename, and delete shelves, put copies on shelves and take them off, and see a library's shelves and tags.
+- An API operation, `GET /api/v1/copies/{copy_id}/shelves`, that lists the shelves holding a copy. Only members of the copy's library see them.

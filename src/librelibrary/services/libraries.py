@@ -302,6 +302,25 @@ def list_copy_tags(session: Session, actor: Actor, copy_id: int) -> list[Tag]:
     return list(session.scalars(statement))
 
 
+@policy_action(Action.COPY_READ)
+def list_copy_shelves(session: Session, actor: Actor, copy_id: int) -> list[Shelf]:
+    """List the shelves that hold a visible copy.
+
+    Shelf names belong to a library's members, so someone who can see the copy
+    only because it is shared more widely gets an empty list.
+    """
+    copy = _visible_copy(session, actor, copy_id)
+    if library_role(session, actor, copy.library_id) is None:
+        return []
+    statement = (
+        select(Shelf)
+        .join(ShelfItem, ShelfItem.shelf_id == Shelf.id)
+        .where(ShelfItem.copy_id == copy_id)
+        .order_by(Shelf.name)
+    )
+    return list(session.scalars(statement))
+
+
 @policy_action(Action.LIBRARY_EDIT)
 def set_copy_tags(
     session: Session, actor: Actor, copy_id: int, names: list[str]

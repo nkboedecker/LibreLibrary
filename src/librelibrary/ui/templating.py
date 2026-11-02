@@ -4,7 +4,13 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
-from librelibrary.ui.support import PRIVACY_CHOICES, money, privacy_label
+from librelibrary.ui.support import (
+    KIND_CHOICES,
+    PRIVACY_CHOICES,
+    kind_label,
+    money,
+    privacy_label,
+)
 
 UI_DIRECTORY = Path(__file__).parent
 
@@ -12,4 +18,6 @@ UI_DIRECTORY = Path(__file__).parent
 templates = Jinja2Templates(directory=UI_DIRECTORY / "templates")
 templates.env.filters["privacy_label"] = privacy_label
 templates.env.filters["money"] = money
+templates.env.filters["kind_label"] = kind_label
+templates.env.globals["KIND_CHOICES"] = KIND_CHOICES
 templates.env.globals["PRIVACY_CHOICES"] = PRIVACY_CHOICES

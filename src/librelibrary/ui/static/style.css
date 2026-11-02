@@ -140,3 +140,10 @@ select {
   color: var(--fg);
 }
 ul.hint { padding-left: 1.25rem; }
+
+ul.tags { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; list-style: none; }
+ul.tags li {
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}

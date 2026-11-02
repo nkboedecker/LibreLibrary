@@ -76,6 +76,7 @@ DENIED_REQUESTS: dict[str, tuple[str, str, Any]] = {
     "tags_list": ("GET", "/libraries/1/tags", None),
     "tags_create": ("POST", "/libraries/1/tags", {"name": "fiction"}),
     "tags_delete": ("DELETE", "/tags/1", None),
+    "copy_shelves_list": ("GET", "/copies/1/shelves", None),
     "shelves_list": ("GET", "/libraries/1/shelves", None),
     "shelves_create": ("POST", "/libraries/1/shelves", {"name": "Top"}),
     "shelves_get": ("GET", "/shelves/1", None),
