@@ -53,13 +53,18 @@ def login(
 ) -> TokenCreatedOut:
     """Check a username and password, and issue a bearer token."""
     limiter = cast(RateLimiter, request.app.state.login_limiter)
-    issued = accounts.login(
+    user = accounts.sign_in(
         session,
         limiter=limiter,
         settings=settings,
         ip=client_ip(request, settings),
         username=payload.username,
         password=payload.password,
+    )
+    issued = accounts.issue_login_token(
+        session,
+        settings=settings,
+        user=user,
         token_name=payload.token_name,
         scopes=[str(scope) for scope in payload.scopes],
     )

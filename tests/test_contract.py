@@ -151,7 +151,12 @@ ADMIN_ONLY = {
 }
 SERVICE_FUNCTIONS_WITHOUT_ACTOR = {
     "accounts.actor_for_token",
-    "accounts.login",
+    "accounts.sign_in",
+    "accounts.issue_login_token",
+    "websessions.start",
+    "websessions.csrf_matches",
+    "websessions.actor_for_session",
+    "websessions.end",
     "accounts.create_first_admin",
     "audit.record",
     "common.paginate",

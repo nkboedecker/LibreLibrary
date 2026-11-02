@@ -1417,8 +1417,12 @@
         "type": "object"
       },
       "MemberOut": {
-        "description": "A user's role in a library.",
+        "description": "A user's role in a library, with the name other members know them by.",
         "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
           "role": {
             "$ref": "#/components/schemas/LibraryRole"
           },
@@ -1429,7 +1433,8 @@
         },
         "required": [
           "user_id",
-          "role"
+          "role",
+          "display_name"
         ],
         "title": "MemberOut",
         "type": "object"

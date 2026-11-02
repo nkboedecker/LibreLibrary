@@ -85,6 +85,21 @@ def list_libraries(
     return paginate(session, statement, limit, offset)
 
 
+@policy_action(Action.COPY_READ)
+def my_roles(session: Session, actor: Actor) -> dict[int, LibraryRole]:
+    """Return the actor's role in each library they belong to.
+
+    Pages use this to offer only the actions that the policy layer would allow.
+    The policy layer still decides every request.
+    """
+    rows = session.execute(
+        select(LibraryMember.library_id, LibraryMember.role).where(
+            LibraryMember.user_id == actor.user_id
+        )
+    )
+    return {library_id: LibraryRole(role) for library_id, role in rows}
+
+
 @policy_action(Action.LIBRARY_CREATE)
 def create_library(session: Session, actor: Actor, payload: LibraryIn) -> Library:
     """Create a library owned by the actor."""

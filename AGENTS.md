@@ -6,12 +6,13 @@ Rules for any AI coding agent working in this repository. Human contributors: se
 
 LibreLibrary is a self-hosted personal library server with a web interface, a versioned REST API, and a built-in MCP server. The design is in `docs/design/architecture.md`; read it rather than relying on a copy here.
 
-**Status:** early development. The core exists: the data model, migrations, the REST API, local sign-in, tokens, and the policy layer. There is no web interface yet.
+**Status:** early development. The core exists: the data model, migrations, the REST API, local sign-in, tokens, and the policy layer. The web interface has cookie sessions, CSRF protection, sign-in, and pages for works, editions, libraries, and copies. The rest of Phase 3 is still to build.
 
 ## Repository layout
 
 - `src/librelibrary/`: the application.
     - `api/v1/`: thin REST routes.
+    - `ui/`: server-rendered pages. Each route uses `@ui_route` to declare the API operation it fulfills.
     - `services/`: business logic. Each public function declares a policy action with `@policy_action`.
     - `authz/`: the policy layer and query scoping.
     - `auth/`: passwords, tokens, and sign-in rate limits.

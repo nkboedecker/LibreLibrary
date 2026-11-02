@@ -192,7 +192,9 @@ def test_new_library_belongs_to_its_creator(api: Api, owner: Account) -> None:
     """The creator gets a member row with the owner role."""
     library = make_library(api, owner)
     members = api.call(owner, "GET", f"/libraries/{library}/members")["items"]
-    assert members == [{"user_id": owner.id, "role": "owner"}]
+    assert members == [
+        {"user_id": owner.id, "role": "owner", "display_name": owner.username}
+    ]
 
 
 def test_non_members_cannot_learn_a_library_exists(

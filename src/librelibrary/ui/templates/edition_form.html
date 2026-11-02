@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Add an edition{% endblock %}
+{% block content %}
+<h1>Add an edition</h1>
+<p>of <a href="/works/{{ work.id }}">{{ work.title }}</a></p>
+{% if errors %}
+<div class="error" role="alert">
+  <p>The edition wasn't saved.</p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<form method="post" action="/works/{{ work.id }}/editions/new" class="stack wide">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  <label for="title">Title</label>
+  <input id="title" name="title" type="text" maxlength="1000" aria-describedby="title-hint"
+         value="{{ values.get('title') or '' }}">
+  <p id="title-hint" class="hint">Leave blank to use the work's title.</p>
+  <label for="subtitle">Subtitle</label>
+  <input id="subtitle" name="subtitle" type="text" maxlength="1000"
+         value="{{ values.get('subtitle') or '' }}">
+  <label for="publisher">Publisher</label>
+  <input id="publisher" name="publisher" type="text" maxlength="500"
+         value="{{ values.get('publisher') or '' }}">
+  <label for="published">Published</label>
+  <input id="published" name="published" type="text" maxlength="32"
+         value="{{ values.get('published') or '' }}">
+  <label for="language">Language</label>
+  <input id="language" name="language" type="text" maxlength="35"
+         value="{{ values.get('language') or '' }}">
+  <label for="format">Format</label>
+  <input id="format" name="format" type="text" maxlength="64" aria-describedby="format-hint"
+         value="{{ values.get('format') or '' }}">
+  <p id="format-hint" class="hint">For example, paperback, hardback, or audiobook.</p>
+  <label for="pages">Pages</label>
+  <input id="pages" name="pages" type="text" inputmode="numeric"
+         value="{{ values.get('pages') or '' }}">
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="/works/{{ work.id }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

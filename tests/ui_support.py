@@ -1,0 +1,126 @@
+"""Helpers for tests of the web interface: users, browsers, and a shared scene."""
+
+import re
+from dataclasses import dataclass
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from librelibrary.auth.passwords import hash_password
+from librelibrary.models import (
+    Copy,
+    Edition,
+    Library,
+    LibraryMember,
+    User,
+    Work,
+)
+
+PASSWORD = "a long test password"
+
+
+def token_of(page: str) -> str:
+    """Read the CSRF token from a page's first form."""
+    match = re.search(r'name="csrf_token" value="([^"]+)"', page)
+    assert match
+    return match.group(1)
+
+
+def make_user(session: Session, username: str, role: str = "member") -> User:
+    """Create a user who can sign in with a password."""
+    user = User(
+        username=username,
+        display_name=username.title(),
+        role=role,
+        password_hash=hash_password(PASSWORD),
+    )
+    session.add(user)
+    session.commit()
+    return user
+
+
+def new_browser(app: FastAPI) -> TestClient:
+    """Create a browser-like client with its own cookies."""
+    return TestClient(app, base_url="https://testserver", follow_redirects=False)
+
+
+@dataclass
+class Person:
+    """A signed-in user with their own browser."""
+
+    browser: TestClient
+    csrf: str
+    id: int
+
+
+def sign_in(
+    app: FastAPI, session: Session, username: str, role: str = "member"
+) -> Person:
+    """Create a user, sign them in, and return them with their CSRF token."""
+    user = make_user(session, username, role)
+    browser = new_browser(app)
+    form = browser.get("/login")
+    browser.post(
+        "/login",
+        data={
+            "username": username,
+            "password": PASSWORD,
+            "csrf_token": token_of(form.text),
+        },
+    )
+    return Person(browser, token_of(browser.get("/works").text), user.id)
+
+
+@dataclass
+class Scene:
+    """One library with an owner, an editor, a viewer, and an outsider."""
+
+    owner: Person
+    editor: Person
+    viewer: Person
+    stranger: Person
+    library_id: int
+    work_id: int
+    edition_id: int
+    copy_id: int
+
+
+def build_scene(app: FastAPI, session: Session) -> Scene:
+    """Seed a library with a work, an edition, and one personal copy."""
+    people = {
+        name: sign_in(app, session, name)
+        for name in ("owner", "editor", "viewer", "stranger")
+    }
+    work = Work(title="Dune")
+    work.editions = [Edition(title="Dune (paperback)", publisher="Ace")]
+    library = Library(
+        owner_id=people["owner"].id,
+        name="Home",
+        default_privacy="personal",
+        editors_see_personal=True,
+    )
+    session.add_all([work, library])
+    session.flush()
+    for name, role in (("owner", "owner"), ("editor", "editor"), ("viewer", "viewer")):
+        session.add(
+            LibraryMember(library_id=library.id, user_id=people[name].id, role=role)
+        )
+    copy = Copy(
+        library_id=library.id,
+        edition_id=work.editions[0].id,
+        privacy="personal",
+        location="Hall shelf",
+    )
+    session.add(copy)
+    session.commit()
+    return Scene(
+        owner=people["owner"],
+        editor=people["editor"],
+        viewer=people["viewer"],
+        stranger=people["stranger"],
+        library_id=library.id,
+        work_id=work.id,
+        edition_id=work.editions[0].id,
+        copy_id=copy.id,
+    )

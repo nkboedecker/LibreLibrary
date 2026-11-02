@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_fields.html" import privacy_select %}
+{% set heading = "Edit copy" if copy else "Add a copy" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+<p>{{ label.work_title }}{% if label.edition_title %}, {{ label.edition_title }}{% endif %}{% if label.publisher %} ({{ label.publisher }}){% endif %}</p>
+{% if errors %}
+<div class="error" role="alert">
+  <p>The copy wasn't saved.</p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if copy or choices %}
+<form method="post" action="{{ '/copies/%d/edit' % copy.id if copy else '/copies/new' }}" class="stack wide">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  {% if not copy %}
+  <input type="hidden" name="edition_id" value="{{ edition_id }}">
+  <label for="library_id">Library</label>
+  <select id="library_id" name="library_id">
+    {% for library in choices %}
+    <option value="{{ library.id }}"{% if values.get("library_id") == library.id %} selected{% endif %}>{{ library.name }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+  <label for="location">Location</label>
+  <input id="location" name="location" type="text" maxlength="200"
+         value="{{ values.get('location') or '' }}">
+  <label for="condition">Condition</label>
+  <input id="condition" name="condition" type="text" maxlength="64"
+         value="{{ values.get('condition') or '' }}">
+  <label for="acquired">Date acquired</label>
+  <input id="acquired" name="acquired" type="date"
+         value="{{ values.get('acquired') or '' }}">
+  <label for="source">Source</label>
+  <input id="source" name="source" type="text" maxlength="200"
+         value="{{ values.get('source') or '' }}">
+  <label for="price">Price</label>
+  <input id="price" name="price" type="text" inputmode="decimal" aria-describedby="price-hint"
+         value="{{ values.get('price') or '' }}">
+  <p id="price-hint" class="hint">A number with up to two decimal places, such as 12.99.</p>
+  <label for="currency">Currency</label>
+  <input id="currency" name="currency" type="text" maxlength="3" aria-describedby="currency-hint"
+         value="{{ values.get('currency') or '' }}">
+  <p id="currency-hint" class="hint">A three-letter code, such as USD.</p>
+  <label for="privacy">Sharing</label>
+  {{ privacy_select("privacy", "privacy", values.get("privacy"), none if copy else "Use the library's default") }}
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="{{ '/copies/%d' % copy.id if copy else '/works/%d' % label.work_id }}">Cancel</a>
+  </div>
+</form>
+{% else %}
+<p>You can't add copies to any library yet. A library's owner can make you an editor{% if user.can_edit %}, or you can <a href="/libraries/new">add a library of your own</a>{% endif %}.</p>
+{% endif %}
+{% if copy %}
+<section aria-labelledby="delete-heading" class="danger">
+  <h2 id="delete-heading">Delete this copy</h2>
+  <p>This also removes its loan history.</p>
+  <form method="post" action="/copies/{{ copy.id }}/delete" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+    <label class="check"><input type="checkbox" name="confirm" value="yes" required>
+      Yes, delete this copy</label>
+    <button type="submit" class="danger-button">Delete copy</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

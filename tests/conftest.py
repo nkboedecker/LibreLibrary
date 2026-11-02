@@ -25,6 +25,8 @@ from librelibrary.migrate import run_migrations  # noqa: E402
 from librelibrary.models import ApiToken, User  # noqa: E402
 from librelibrary.settings import Settings  # noqa: E402
 
+from .ui_support import Scene, build_scene  # noqa: E402
+
 
 @pytest.fixture(scope="session")
 def database_url(tmp_path_factory: pytest.TempPathFactory) -> str:
@@ -75,6 +77,18 @@ def app(engine: Engine, database_url: str) -> FastAPI:
 def client(app: FastAPI) -> TestClient:
     """Give a test an unauthenticated HTTP client."""
     return TestClient(app)
+
+
+@pytest.fixture
+def browser(app: FastAPI) -> TestClient:
+    """Give a test a browser-like client, which sends cookies over HTTPS."""
+    return TestClient(app, base_url="https://testserver", follow_redirects=False)
+
+
+@pytest.fixture
+def scene(app: FastAPI, session: Session) -> Scene:
+    """Give a test a library with an owner, an editor, a viewer, and an outsider."""
+    return build_scene(app, session)
 
 
 ALL_SCOPES = ("library:read", "library:write")

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Libraries{% endblock %}
+{% block content %}
+<h1>Libraries</h1>
+{% if user.can_edit %}<p><a class="button" href="/libraries/new">Add a library</a></p>{% endif %}
+{% if listing.items %}
+<table>
+  <thead>
+    <tr><th scope="col">Name</th><th scope="col">Your role</th>
+        <th scope="col">Default sharing</th></tr>
+  </thead>
+  <tbody>
+    {% for library in listing.items %}
+    <tr>
+      <th scope="row"><a href="/libraries/{{ library.id }}">{{ library.name }}</a></th>
+      <td>{{ roles[library.id] }}</td>
+      <td>{{ library.default_privacy | privacy_label }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>You aren't in any library yet.{% if user.can_edit %} Add one to start keeping track of your copies.{% endif %}</p>
+{% endif %}
+{% endblock %}

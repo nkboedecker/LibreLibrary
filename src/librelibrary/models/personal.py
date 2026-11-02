@@ -12,9 +12,10 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from librelibrary.db import Base, Hundredths, UTCDateTime, utcnow
+from librelibrary.models.system import User
 
 
 class Group(Base):
@@ -78,6 +79,13 @@ class LibraryMember(Base):
         ForeignKey("user_account.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     role: Mapped[str] = mapped_column(String(16))
+
+    user: Mapped["User"] = relationship(viewonly=True, lazy="joined")
+
+    @property
+    def display_name(self) -> str:
+        """Return the member's name, so that members can tell each other apart."""
+        return self.user.display_name
 
 
 class Copy(Base):

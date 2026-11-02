@@ -18,3 +18,4 @@ class Settings(BaseSettings):
     login_rate_limit_per_username: str = "10/minute"
     login_token_lifetime_days: int = 30
     trusted_proxies: list[str] = []
+    session_lifetime_days: int = 14
