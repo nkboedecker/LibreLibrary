@@ -864,6 +864,70 @@ def test_a_copy_has_one_open_loan(api: Api, owner: Account) -> None:
     api.call(owner, "POST", "/loans", body, 201)
 
 
+def test_tag_names_do_not_reveal_copies_a_member_cannot_see(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """A library's tag list shows only tags on copies the reader may see."""
+    viewer = make_account()
+    library = make_library(api, owner)
+    join(api, owner, viewer, library, "viewer")
+    hidden = make_copy(api, owner, library, "personal")
+    shared = make_copy(api, owner, library, "library")
+    api.call(owner, "PUT", f"/copies/{hidden}/tags", {"names": ["secret"]})
+    api.call(owner, "PUT", f"/copies/{shared}/tags", {"names": ["open"]})
+
+    seen = api.call(viewer, "GET", f"/libraries/{library}/tags")["items"]
+    own = api.call(owner, "GET", f"/libraries/{library}/tags")["items"]
+
+    assert [tag["name"] for tag in seen] == ["open"]
+    assert sorted(tag["name"] for tag in own) == ["open", "secret"]
+
+
+def test_orphaned_tags_do_not_reveal_hidden_copies(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """A tag that left a hidden copy keeps its name hidden from other readers."""
+    viewer, editor = make_account(), make_account()
+    library = make_library(api, owner)
+    join(api, owner, viewer, library, "viewer")
+    join(api, owner, editor, library, "editor")
+    retagged = make_copy(api, owner, library, "personal")
+    deleted = make_copy(api, owner, library, "personal")
+    api.call(owner, "PUT", f"/copies/{retagged}/tags", {"names": ["old-secret"]})
+    api.call(owner, "PUT", f"/copies/{deleted}/tags", {"names": ["gone-secret"]})
+    api.call(owner, "PUT", f"/copies/{retagged}/tags", {"names": ["new-name"]})
+    api.call(owner, "DELETE", f"/copies/{deleted}", expect=204)
+
+    def names(person: Account) -> set[str]:
+        items = api.call(person, "GET", f"/libraries/{library}/tags")["items"]
+        return {tag["name"] for tag in items}
+
+    assert names(owner) == {"old-secret", "gone-secret", "new-name"}
+    assert names(editor) == {"old-secret", "gone-secret", "new-name"}
+    assert names(viewer) == set()
+    api.call(owner, "PATCH", f"/libraries/{library}", {"editors_see_personal": False})
+    assert names(editor) == set()
+    assert names(owner) == {"old-secret", "gone-secret", "new-name"}
+
+
+def test_an_editor_who_cannot_see_a_copy_cannot_probe_a_shelf_for_it(
+    api: Api, owner: Account, make_account: MakeAccount
+) -> None:
+    """Removing a hidden copy from a shelf says nothing and changes nothing."""
+    editor = make_account()
+    library = make_library(api, owner, editors_see_personal=False)
+    join(api, owner, editor, library, "editor")
+    hidden = make_copy(api, owner, library, "personal")
+    shelf = api.call(owner, "POST", f"/libraries/{library}/shelves", {"name": "S"}, 201)
+    path = f"/shelves/{shelf['id']}/copies/{hidden}"
+    api.call(owner, "PUT", path, expect=204)
+
+    api.call(editor, "DELETE", path, expect=404)
+    api.call(editor, "DELETE", f"/shelves/{shelf['id']}/copies/99999", expect=404)
+
+    assert api.call(owner, "GET", f"/shelves/{shelf['id']}/copies")["total"] == 1
+
+
 def test_copy_tags_replace_and_stay_in_their_library(api: Api, owner: Account) -> None:
     """Tags are per library, and a set replaces the old one."""
     library = make_library(api, owner)

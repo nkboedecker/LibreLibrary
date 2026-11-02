@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from sqlalchemy import delete, select
+from sqlalchemy import ColumnElement, delete, or_, select
 from sqlalchemy.orm import Session
 
 from librelibrary.authz.policy import (
@@ -330,9 +330,30 @@ def set_copy_tags(
 def list_tags(
     session: Session, actor: Actor, library_id: int, limit: int, offset: int
 ) -> Listing[Tag]:
-    """List a library's tags."""
-    _open_library(session, actor, library_id, Action.LIBRARY_READ)
-    statement = select(Tag).where(Tag.library_id == library_id).order_by(Tag.name)
+    """List a library's tags, without names that could reveal a hidden copy.
+
+    A tag name can reveal what a copy is. A tag is listed if it is on a copy the
+    actor can see. A tag on no copy is a leftover from one that was re-tagged or
+    deleted, so it is listed only for someone who could see every copy it might
+    have been on: the owner, or an editor if the library lets editors see
+    personal copies.
+    """
+    library = _open_library(session, actor, library_id, Action.LIBRARY_READ)
+    role = library_role(session, actor, library_id)
+    sees_everything = role == LibraryRole.OWNER or (
+        role == LibraryRole.EDITOR and library.editors_see_personal
+    )
+    on_visible = (
+        select(CopyTag.tag_id)
+        .join(Copy, Copy.id == CopyTag.copy_id)
+        .where(visible_copies(actor))
+    )
+    listed: ColumnElement[bool] = Tag.id.in_(on_visible)
+    if sees_everything:
+        listed = or_(listed, Tag.id.not_in(select(CopyTag.tag_id)))
+    statement = (
+        select(Tag).where(Tag.library_id == library_id, listed).order_by(Tag.name)
+    )
     return paginate(session, statement, limit, offset)
 
 
@@ -438,8 +459,13 @@ def add_to_shelf(session: Session, actor: Actor, shelf_id: int, copy_id: int) ->
 def remove_from_shelf(
     session: Session, actor: Actor, shelf_id: int, copy_id: int
 ) -> None:
-    """Take a copy off a shelf."""
+    """Take a copy off a shelf.
+
+    A copy the actor can't see answers like one that isn't on the shelf, so
+    this can't be used to find out what is on it.
+    """
     _shelf(session, actor, shelf_id, Action.LIBRARY_EDIT)
+    _visible_copy(session, actor, copy_id)
     item = session.get(ShelfItem, (shelf_id, copy_id))
     if item is None:
         raise NotFound
