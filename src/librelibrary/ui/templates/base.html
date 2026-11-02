@@ -14,6 +14,7 @@
     {% if user %}
     <nav aria-label="Main">
       <a href="/works"{% if nav == "works" %} aria-current="page"{% endif %}>Works</a>
+      <a href="/libraries"{% if nav == "libraries" %} aria-current="page"{% endif %}>Libraries</a>
     </nav>
     <form method="post" action="/logout" class="sign-out">
       <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">

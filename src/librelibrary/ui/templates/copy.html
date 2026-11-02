@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ label.work_title }}{% endblock %}
+{% block content %}
+{% if library %}<p><a href="/libraries/{{ library.id }}">← {{ library.name }}</a></p>{% endif %}
+<h1><a href="/works/{{ label.work_id }}">{{ label.work_title }}</a></h1>
+{% if label.edition_title or label.publisher %}
+<p class="byline">{{ label.edition_title or "" }}{% if label.edition_title and label.publisher %}, {% endif %}{{ label.publisher or "" }}</p>
+{% endif %}
+<dl>
+  <dt>Library</dt>
+  <dd>{% if library %}<a href="/libraries/{{ library.id }}">{{ library.name }}</a>{% else %}A library you aren't a member of{% endif %}</dd>
+  <dt>Sharing</dt><dd>{{ copy.privacy | privacy_label }}</dd>
+  {% if copy.location %}<dt>Location</dt><dd>{{ copy.location }}</dd>{% endif %}
+  {% if copy.condition %}<dt>Condition</dt><dd>{{ copy.condition }}</dd>{% endif %}
+  {% if copy.acquired %}<dt>Acquired</dt><dd>{{ copy.acquired.isoformat() }}</dd>{% endif %}
+  {% if copy.source %}<dt>Source</dt><dd>{{ copy.source }}</dd>{% endif %}
+  {% if copy.price is not none %}<dt>Price</dt><dd>{{ copy.price | money }}{% if copy.currency %} {{ copy.currency }}{% endif %}</dd>{% endif %}
+</dl>
+{% if can_edit %}<p><a class="button" href="/copies/{{ copy.id }}/edit">Edit this copy</a></p>{% endif %}
+{% endblock %}

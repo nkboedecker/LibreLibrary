@@ -129,3 +129,14 @@ dd { margin: 0; }
 .check { display: flex; gap: 0.5rem; align-items: center; }
 .check input { min-height: auto; }
 ul.error { margin: 0; }
+
+select {
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+ul.hint { padding-left: 1.25rem; }

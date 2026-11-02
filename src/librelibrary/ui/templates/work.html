@@ -21,15 +21,18 @@
 {% if work.description %}<p class="description">{{ work.description }}</p>{% endif %}
 {% if user.can_edit %}<p><a class="button" href="/works/{{ work.id }}/edit">Edit this work</a></p>{% endif %}
 <h2>Editions</h2>
+{% if user.can_edit %}<p><a href="/works/{{ work.id }}/editions/new">Add an edition</a></p>{% endif %}
 {% if editions.items %}
 <table>
   <thead><tr><th scope="col">Title</th><th scope="col">Publisher</th>
-    <th scope="col">Published</th><th scope="col">Format</th></tr></thead>
+    <th scope="col">Published</th><th scope="col">Format</th>
+    {% if user.can_edit %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead>
   <tbody>
   {% for edition in editions.items %}
   <tr><th scope="row">{{ edition.title or work.title }}</th>
     <td>{{ edition.publisher or "" }}</td><td>{{ edition.published or "" }}</td>
-    <td>{{ edition.format or "" }}</td></tr>
+    <td>{{ edition.format or "" }}</td>
+    {% if user.can_edit %}<td><a href="/copies/new?edition_id={{ edition.id }}">Add a copy</a></td>{% endif %}</tr>
   {% endfor %}
   </tbody>
 </table>

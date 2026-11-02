@@ -1,6 +1,11 @@
 """Helpers for reading HTML forms, which send every field as text."""
 
+from typing import Annotated
+
+from fastapi import Form
 from pydantic import ValidationError
+
+FormText = Annotated[str, Form(max_length=400_000)]
 
 
 def blank_to_none(value: str) -> str | None:

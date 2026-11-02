@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_fields.html" import pager %}
+{% block title %}{{ library.name }}{% endblock %}
+{% block content %}
+<p><a href="/libraries">← All libraries</a></p>
+<h1>{{ library.name }}</h1>
+<dl>
+  <dt>Your role</dt><dd>{{ role }}</dd>
+  <dt>Default sharing</dt><dd>{{ library.default_privacy | privacy_label }}</dd>
+  <dt>Editors see personal copies</dt><dd>{{ "Yes" if library.editors_see_personal else "No" }}</dd>
+</dl>
+{% if can_manage %}<p><a class="button" href="/libraries/{{ library.id }}/edit">Edit this library</a></p>{% endif %}
+<h2>Members</h2>
+<table>
+  <thead><tr><th scope="col">Name</th><th scope="col">Role</th></tr></thead>
+  <tbody>
+    {% for member in members.items %}
+    <tr><th scope="row">{{ member.display_name }}</th><td>{{ member.role }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<h2>Copies</h2>
+{% if can_edit %}
+<p>To add a copy, <a href="/works">find the work</a>, then choose “Add a copy” on one of its editions.</p>
+{% endif %}
+{% if copies.items %}
+<table>
+  <caption class="visually-hidden">Copies, page {{ page }} of {{ last_page }}</caption>
+  <thead>
+    <tr><th scope="col">Work</th><th scope="col">Edition</th>
+        <th scope="col">Location</th><th scope="col">Sharing</th></tr>
+  </thead>
+  <tbody>
+    {% for copy in copies.items %}
+    {% set label = labels[copy.edition_id] %}
+    <tr>
+      <th scope="row"><a href="/copies/{{ copy.id }}">{{ label.work_title }}</a></th>
+      <td>{{ label.edition_title or "" }}</td>
+      <td>{{ copy.location or "" }}</td>
+      <td>{{ copy.privacy | privacy_label }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{{ pager("/libraries/%d" % library.id, page, last_page) }}
+{% else %}
+<p>There are no copies you can see in this library yet.</p>
+{% endif %}
+{% endblock %}

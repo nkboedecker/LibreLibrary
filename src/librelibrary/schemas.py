@@ -437,10 +437,11 @@ class MemberIn(_In):
 
 
 class MemberOut(_Out):
-    """A user's role in a library."""
+    """A user's role in a library, with the name other members know them by."""
 
     user_id: int
     role: LibraryRole
+    display_name: str
 
 
 class CopyIn(_In):

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_fields.html" import privacy_select %}
+{% set heading = "Edit library" if library else "Add a library" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+{% if errors %}
+<div class="error" role="alert">
+  <p>The library wasn't saved.</p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<form method="post" action="{{ '/libraries/%d/edit' % library.id if library else '/libraries/new' }}" class="stack wide">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  <label for="name">Name</label>
+  <input id="name" name="name" type="text" maxlength="200" required
+         value="{{ values.get('name') or '' }}">
+  <label for="default_privacy">Default sharing for new copies</label>
+  {{ privacy_select("default_privacy", "default_privacy", values.get("default_privacy")) }}
+  <label class="check">
+    <input type="checkbox" name="editors_see_personal" value="yes"{% if values.get("editors_see_personal") %} checked{% endif %}>
+    Editors can see personal copies
+  </label>
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="{{ '/libraries/%d' % library.id if library else '/libraries' }}">Cancel</a>
+  </div>
+</form>
+{% if library %}
+<section aria-labelledby="delete-heading" class="danger">
+  <h2 id="delete-heading">Delete this library</h2>
+  <p>This also removes every copy in it, and its loans.</p>
+  <form method="post" action="/libraries/{{ library.id }}/delete" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+    <label class="check"><input type="checkbox" name="confirm" value="yes" required>
+      Yes, delete “{{ library.name }}”</label>
+    <button type="submit" class="danger-button">Delete library</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

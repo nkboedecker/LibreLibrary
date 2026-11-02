@@ -1,0 +1,23 @@
+{% macro privacy_select(id, name, selected, blank_label=none) %}
+<select id="{{ id }}" name="{{ name }}" aria-describedby="{{ id }}-hint">
+  {% if blank_label %}<option value=""{% if not selected %} selected{% endif %}>{{ blank_label }}</option>{% endif %}
+  {% for value, label, hint in PRIVACY_CHOICES %}
+  <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+</select>
+<ul id="{{ id }}-hint" class="hint">
+  {% for value, label, hint in PRIVACY_CHOICES %}
+  <li><strong>{{ label }}:</strong> {{ hint }}</li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{% macro pager(base, page, last_page) %}
+{% if last_page > 1 %}
+<nav aria-label="Pages" class="pager">
+  {% if page > 1 %}<a href="{{ base }}?page={{ page - 1 }}" rel="prev">Previous</a>{% endif %}
+  <span>Page {{ page }} of {{ last_page }}</span>
+  {% if page < last_page %}<a href="{{ base }}?page={{ page + 1 }}" rel="next">Next</a>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}

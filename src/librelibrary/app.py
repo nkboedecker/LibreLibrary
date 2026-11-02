@@ -25,6 +25,8 @@ from librelibrary.migrate import run_migrations
 from librelibrary.proxy import ForwardedProtoMiddleware
 from librelibrary.schemas import ErrorOut
 from librelibrary.settings import Settings
+from librelibrary.ui import copies as copy_pages
+from librelibrary.ui import libraries as library_pages
 from librelibrary.ui import pages, works
 from librelibrary.ui.deps import LoginRequired
 from librelibrary.ui.templating import UI_DIRECTORY, templates
@@ -160,6 +162,8 @@ def create_app(
     app.include_router(api)
     app.include_router(pages.router)
     app.include_router(works.router)
+    app.include_router(library_pages.router)
+    app.include_router(copy_pages.router)
     app.mount("/static", StaticFiles(directory=UI_DIRECTORY / "static"), name="static")
 
     @app.middleware("http")

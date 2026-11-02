@@ -23,7 +23,15 @@ from librelibrary.app import create_app
 from librelibrary.settings import Settings
 
 # Pages that read or change no records, so no API operation matches them.
-NO_API_EQUIVALENT = {"home", "login_form", "logout", "new_work_form"}
+NO_API_EQUIVALENT = {
+    "home",
+    "login_form",
+    "logout",
+    "new_work_form",
+    "new_edition_form",
+    "new_library_form",
+    "new_copy_form",
+}
 SERVICE_MODULES = {
     module.name for module in pkgutil.iter_modules(librelibrary.services.__path__)
 }
