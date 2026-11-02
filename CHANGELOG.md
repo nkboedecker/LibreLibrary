@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 ### Fixed
 
 - Redirects behind a reverse proxy now keep `https://`. The server reads `X-Forwarded-Proto`, but only from `LIBRELIBRARY_TRUSTED_PROXIES`.
+- A library's tag list no longer reveals tag names that only hidden copies used, including after a tag has been removed from a copy.
+- Taking a copy off a shelf no longer tells someone whether a copy they can't see is on it.
 
 ### Added
 
