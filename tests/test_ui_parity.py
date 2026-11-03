@@ -31,6 +31,7 @@ NO_API_EQUIVALENT = {
     "new_edition_form",
     "new_library_form",
     "new_copy_form",
+    "new_shelf_form",
 }
 SERVICE_MODULES = {
     module.name for module in pkgutil.iter_modules(librelibrary.services.__path__)

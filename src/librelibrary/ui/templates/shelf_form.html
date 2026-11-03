@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% set heading = "Edit shelf" if shelf else "Add a shelf" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+<p>in <a href="/libraries/{{ library.id }}">{{ library.name }}</a></p>
+{% if errors %}
+<div class="error" role="alert">
+  <p>The shelf wasn't saved.</p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<form method="post" action="{{ '/shelves/%d/edit' % shelf.id if shelf else '/libraries/%d/shelves/new' % library.id }}" class="stack wide">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  <label for="name">Name</label>
+  <input id="name" name="name" type="text" maxlength="200" required
+         value="{{ values.get('name') or '' }}">
+  <label for="kind">Kind</label>
+  <select id="kind" name="kind">
+    {% for value, label in KIND_CHOICES %}
+    <option value="{{ value }}"{% if value == values.get("kind") %} selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a href="{{ '/shelves/%d' % shelf.id if shelf else '/libraries/%d' % library.id }}">Cancel</a>
+  </div>
+</form>
+{% if shelf %}
+<section aria-labelledby="delete-heading" class="danger">
+  <h2 id="delete-heading">Delete this {{ shelf.kind | kind_label | lower }}</h2>
+  <p>The copies on it stay in the library.</p>
+  <form method="post" action="/shelves/{{ shelf.id }}/delete" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+    <label class="check"><input type="checkbox" name="confirm" value="yes" required>
+      Yes, delete “{{ shelf.name }}”</label>
+    <button type="submit" class="danger-button">Delete {{ shelf.kind | kind_label | lower }}</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

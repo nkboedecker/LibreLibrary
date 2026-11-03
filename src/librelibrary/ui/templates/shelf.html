@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_fields.html" import pager %}
+{% block title %}{{ shelf.name }}{% endblock %}
+{% block content %}
+<p><a href="/libraries/{{ library.id }}">← {{ library.name }}</a></p>
+<h1>{{ shelf.name }}</h1>
+<p class="byline">{{ shelf.kind | kind_label }}</p>
+{% if can_edit %}<p><a class="button" href="/shelves/{{ shelf.id }}/edit">Edit this {{ shelf.kind | kind_label | lower }}</a></p>{% endif %}
+{% if copies.items %}
+<table>
+  <caption class="visually-hidden">Copies on this {{ shelf.kind | kind_label | lower }}, page {{ page }} of {{ last_page }}</caption>
+  <thead>
+    <tr><th scope="col">Work</th><th scope="col">Edition</th>
+        <th scope="col">Location</th>
+        {% if can_edit %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}</tr>
+  </thead>
+  <tbody>
+    {% for copy in copies.items %}
+    {% set label = labels[copy.edition_id] %}
+    <tr>
+      <th scope="row"><a href="/copies/{{ copy.id }}">{{ label.work_title }}</a></th>
+      <td>{{ label.edition_title or "" }}</td>
+      <td>{{ copy.location or "" }}</td>
+      {% if can_edit %}
+      <td>
+        <form method="post" action="/shelves/{{ shelf.id }}/copies/{{ copy.id }}/remove">
+          <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+          <button type="submit" class="link-button" aria-label="Remove {{ label.work_title }} from this {{ shelf.kind | kind_label | lower }}">Remove</button>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{{ pager("/shelves/%d" % shelf.id, page, last_page) }}
+{% else %}
+<p>There is nothing on this {{ shelf.kind | kind_label | lower }} that you can see yet.{% if can_edit %} Open a copy and choose “Add to shelf”.{% endif %}</p>
+{% endif %}
+{% endblock %}

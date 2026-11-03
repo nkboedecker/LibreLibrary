@@ -10,9 +10,13 @@ from sqlalchemy.orm import Session
 from librelibrary.auth.passwords import hash_password
 from librelibrary.models import (
     Copy,
+    CopyTag,
     Edition,
     Library,
     LibraryMember,
+    Shelf,
+    ShelfItem,
+    Tag,
     User,
     Work,
 )
@@ -124,3 +128,44 @@ def build_scene(app: FastAPI, session: Session) -> Scene:
         edition_id=work.editions[0].id,
         copy_id=copy.id,
     )
+
+
+def add_copy(
+    session: Session, scene: Scene, privacy: str = "library", location: str = "Spare"
+) -> int:
+    """Add another copy of the scene's edition to its library."""
+    copy = Copy(
+        library_id=scene.library_id,
+        edition_id=scene.edition_id,
+        privacy=privacy,
+        location=location,
+    )
+    session.add(copy)
+    session.commit()
+    return copy.id
+
+
+def add_shelf(
+    session: Session, library_id: int, name: str = "Favorites", kind: str = "shelf"
+) -> int:
+    """Add a shelf to a library."""
+    shelf = Shelf(library_id=library_id, name=name, kind=kind)
+    session.add(shelf)
+    session.commit()
+    return shelf.id
+
+
+def put_on_shelf(session: Session, shelf_id: int, copy_id: int) -> None:
+    """Put a copy on a shelf."""
+    session.add(ShelfItem(shelf_id=shelf_id, copy_id=copy_id))
+    session.commit()
+
+
+def add_tags(session: Session, library_id: int, copy_id: int, *names: str) -> None:
+    """Tag a copy, creating the tags in its library."""
+    for name in names:
+        tag = Tag(library_id=library_id, name=name)
+        session.add(tag)
+        session.flush()
+        session.add(CopyTag(copy_id=copy_id, tag_id=tag.id))
+    session.commit()

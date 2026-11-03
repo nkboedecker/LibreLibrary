@@ -23,6 +23,8 @@ PRIVACY_CHOICES = [
     ("server", "Server", "Everyone signed in to this server."),
 ]
 PRIVACY_LABELS = {value: label for value, label, _hint in PRIVACY_CHOICES}
+KIND_CHOICES = [("shelf", "Shelf"), ("collection", "Collection")]
+KIND_LABELS = dict(KIND_CHOICES)
 
 
 def allowed(actor: Actor, action: Action, resource: Resource | None = None) -> bool:
@@ -40,6 +42,11 @@ def allowed(actor: Actor, action: Action, resource: Resource | None = None) -> b
 def privacy_label(value: str) -> str:
     """Return the name of a sharing level."""
     return PRIVACY_LABELS.get(value, value)
+
+
+def kind_label(value: str) -> str:
+    """Return the name of a shelf kind."""
+    return KIND_LABELS.get(value, value)
 
 
 def money(value: object) -> str:

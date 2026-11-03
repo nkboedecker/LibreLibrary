@@ -17,4 +17,46 @@
   {% if copy.price is not none %}<dt>Price</dt><dd>{{ copy.price | money }}{% if copy.currency %} {{ copy.currency }}{% endif %}</dd>{% endif %}
 </dl>
 {% if can_edit %}<p><a class="button" href="/copies/{{ copy.id }}/edit">Edit this copy</a></p>{% endif %}
+<h2 id="tags-heading">Tags</h2>
+{% if errors %}
+<div class="error" role="alert">
+  <p>The tags weren't saved.</p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if tags %}
+<ul class="tags">{% for tag in tags %}<li>{{ tag.name }}</li>{% endfor %}</ul>
+{% else %}
+<p>No tags yet.</p>
+{% endif %}
+{% if can_edit %}
+<form method="post" action="/copies/{{ copy.id }}/tags" class="stack wide" aria-labelledby="tags-heading">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  <label for="tags">Tags</label>
+  <input id="tags" name="tags" type="text" aria-describedby="tags-hint"
+         value="{{ tag_text }}">
+  <p id="tags-hint" class="hint">Separate tags with commas. Saving replaces this copy's tags.</p>
+  <button type="submit">Save tags</button>
+</form>
+{% endif %}
+{% if library %}
+<h2>Shelves</h2>
+{% if shelves %}
+<ul>{% for shelf in shelves %}<li><a href="/shelves/{{ shelf.id }}">{{ shelf.name }}</a></li>{% endfor %}</ul>
+{% else %}
+<p>This copy isn't on a shelf.</p>
+{% endif %}
+{% if can_edit and shelf_choices %}
+<form method="post" action="/copies/{{ copy.id }}/shelves" class="stack wide">
+  <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+  <label for="shelf_id">Add to shelf</label>
+  <select id="shelf_id" name="shelf_id">
+    {% for shelf in shelf_choices %}<option value="{{ shelf.id }}">{{ shelf.name }}</option>{% endfor %}
+  </select>
+  <button type="submit">Add to shelf</button>
+</form>
+{% elif can_edit %}
+<p><a href="/libraries/{{ library.id }}/shelves/new">Add a shelf</a> to organize this library's copies.</p>
+{% endif %}
+{% endif %}
 {% endblock %}
