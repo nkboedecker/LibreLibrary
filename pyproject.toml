@@ -16,7 +16,7 @@ dependencies = [
     "pg8000==1.31.6",
     "pydantic-settings==2.16.2",
     "python-multipart==0.0.33",
-    "sqlalchemy==2.1.6",
+    "sqlalchemy==2.1.8",
     "structlog==26.1.0",
     "uvicorn==0.54.0",
 ]
@@ -39,12 +39,12 @@ dev = [
     "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "ruff==0.17.3",
-    "schemathesis==4.32.7",
-    "zizmor==1.31.1",
+    "schemathesis==4.33.1",
+    "zizmor==1.32.0",
 ]
 
 [build-system]
-requires = ["uv_build==0.13.6"]
+requires = ["uv_build==0.13.7"]
 build-backend = "uv_build"
 
 [tool.ruff]
