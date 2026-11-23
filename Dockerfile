@@ -9,7 +9,11 @@ RUN uv sync --frozen --no-dev --no-editable
 FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 LABEL org.opencontainers.image.title="LibreLibrary" \
       org.opencontainers.image.licenses="Apache-2.0"
-RUN useradd --uid 1000 --no-create-home librelibrary \
+# Install Debian's security fixes, which the pinned base image can lag behind.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --uid 1000 --no-create-home librelibrary \
     && install -d -o 1000 -g 1000 /data
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+### Security
+
+- The container image now installs Debian's security updates when it's built, so it no longer ships with known, fixable flaws in system packages such as apt and zlib.
+
 ### Fixed
 
 - Redirects behind a reverse proxy now keep `https://`. The server reads `X-Forwarded-Proto`, but only from `LIBRELIBRARY_TRUSTED_PROXIES`.
